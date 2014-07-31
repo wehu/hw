@@ -1,0 +1,3 @@
+module Test3 where
+
+main = liftS (\a -> a) clk
