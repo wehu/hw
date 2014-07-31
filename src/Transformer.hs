@@ -6,6 +6,7 @@ import qualified AST as A
 import qualified Data.Map as Map
 import Data.List
 import Text.Regex.Posix
+import Data.Char
 
 replace a b [] = []
 replace a b s@(x:xs) =
@@ -19,6 +20,7 @@ hsName n =
         in replace '.' "__" $ c ++ "__" ++ p 
   else n
 
+isCap (x:_) = isUpper x
 
 transform2hs m = 
   "module " ++ (M.name m) ++ " where\n\n" ++
@@ -41,11 +43,13 @@ transform2hs m =
     (M.types m) ++
   Map.foldlWithKey
     (\acc n s ->
-    	acc ++ "\n\n" ++
-    	(case Map.lookup n (M.env m) of
-    		Nothing -> ""
-    		Just ((T.Scheme _ t), _) -> (hsName n) ++ " :: " ++ (type2hs t) ++ "\n") ++
-    	(exp2hs s)
+      if isCap $ hsName n
+      then acc
+    	else acc ++ "\n\n" ++
+    	     (case Map.lookup n (M.env m) of
+    	     	Nothing -> ""
+    	     	Just ((T.Scheme _ t), _) -> (hsName n) ++ " :: " ++ (type2hs t) ++ "\n") ++
+    	     (exp2hs s)
     )
     ""
     (M.source m)
@@ -56,7 +60,7 @@ type2hs T.TBool    = "Bool"
 type2hs T.TFloat   = "Float"
 type2hs T.TDouble  = "Double"
 type2hs T.TStr     = "String"
-type2hs (T.TCon a b) = "(" ++ (type2hs a) ++ type2hsList b ++ ")"
+type2hs (T.TCon a b) = "(" ++ (type2hs a) ++ " " ++ type2hsList b ++ ")"
 type2hs (T.TCN a)  = hsName a
 type2hs (T.TFun a b) = "(" ++ (type2hsList a) ++ " -> " ++ (type2hs b) ++ ")"
 

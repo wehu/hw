@@ -25,7 +25,7 @@ processFiles ps [] = return ()
 processFiles ps (f:files) = do
         r <- R.importFile ps f
         case r of
-        	Right m  -> putStrLn $ T.transform2hs m
+        	Right m  -> writeFile (f ++ ".hs") $ T.transform2hs m
         	Left err -> putStrLn err
         processFiles ps files
 
