@@ -30,7 +30,7 @@ ooo = BBB
 
 f a = a
 
-main :: Signal a -> Signal b
+main :: Signal a -> Signal a 
 main b = liftS f b
 
 ll = not True || False

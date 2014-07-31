@@ -445,7 +445,7 @@ resolve n = do
               Just (T.Scheme var tc) -> do
                 s <- unify e t tc
                 (let nt = subSt s t
-                 in (if False
+                 in (if nt /= tc
                      then typeMismatch e nt tc
                      else do
                             st <- generalize nullEnv nt
