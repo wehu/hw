@@ -141,7 +141,7 @@ importFile ps file = do
           )
           (return "")
           ps
-  contents <- readFile fn
+  contents <- readFile (if fn == "" then file else fn)
   case P.iParse file contents of
     Left err -> return $ Left $ show err
     Right m -> do
