@@ -54,6 +54,7 @@ nestedSignalType i (TCN a)  = if a == "Signal" then i + 1 else i
 nestedSignalType i (TFun a b) = maximum [(nestedSignalTypeList i a), (nestedSignalType i b)]
 nestedSignalType i _ = i
 
+nestedSignalTypeList i [] = i
 nestedSignalTypeList i a = maximum (map (nestedSignalType i) a)
 
 isNestedSignalType t = (nestedSignalType 0 t) >= 2

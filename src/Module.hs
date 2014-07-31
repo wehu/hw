@@ -111,7 +111,12 @@ addEnv n s pos m      =
 
 sysSourcePos = newPos "" 0 0
 
-global_list = ["[]", "()", "True", "False", "Signal", "*", "/", "+", "-", "||", "&&", "not", "liftS", "liftS2", "foldS", "main", ":"]
+global_list = ["[]", "()", "True", "False",
+               "Signal", "Clk",
+               "*", "/", "+", "-", "||", "&&", "not",
+               "liftS", "liftS2", "foldS", "clk",
+               "main",
+               ":"]
 
 prefix m n =
   let pre = name m
@@ -132,6 +137,7 @@ prefix m n =
 addInitEnv m =
   addType_ "[]" [(T.TCon (T.TCN "[]") [T.TVar "a"]), (T.TCon (T.TCN "[]") [T.TVar "a"])] sysSourcePos $
   addType_ "Signal" [(T.TCon (T.TCN "Signal") [T.TVar "a"]), (T.TCon (T.TCN "Signal") [T.TVar "a"])] sysSourcePos $
+  addType_ "Clk" [(T.TCon (T.TCN "Clk") []), (T.TCon (T.TCN "Clk") [])] sysSourcePos $
   addEnv_ "liftS" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a"] (T.TVar "b"),
      (T.TCon (T.TCN "Signal") [T.TVar "a"])] (T.TCon (T.TCN "Signal") [T.TVar "b"]))) sysSourcePos $
   addEnv_ "liftS2" (T.Scheme ["a", "b", "c"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "c"),
@@ -139,6 +145,7 @@ addInitEnv m =
     (T.TCon (T.TCN "Signal") [T.TVar "c"]))) sysSourcePos $
   addEnv_ "foldS" (T.Scheme ["a", "b", "c"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "c"),
      (T.TCon (T.TCN "Signal") [T.TVar "b"])] (T.TCon (T.TCN "Signal") [T.TVar "c"]))) sysSourcePos $
+  addEnv_ "clk" (T.Scheme [] (T.TCon (T.TCN "Signal") [T.TCon (T.TCN "Clk") []])) sysSourcePos $
   addEnv_ "True" (T.Scheme [] $ T.TBool) sysSourcePos $
   addEnv_ "False" (T.Scheme [] $ T.TBool) sysSourcePos $
   addEnv_ "*" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
