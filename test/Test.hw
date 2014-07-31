@@ -1,0 +1,36 @@
+
+module Test where
+
+
+import Test2 as XX
+
+data B = BBB
+data A a = BB a| CCC a| NN (a -> Int)
+--data A = DD
+aaa :: a -> a -> A (A a)
+aaa aa bb = let a = CCC bb
+                b = BB a
+             in b
+bbb = 1 * 2 /4 + 3 - 0
+fff = BBB
+eee = 3:[1, 2]
+yyy = (2, 1)
+ggg (BB aaa) = if False then aaa else aaa
+hhh 1 = case 1 of
+            yyy -> 2
+            xxx -> 1
+nnn :: Int -> Int
+nnn a = a
+mmm = nnn 2
+ttt = let f = \a->a
+       in (f 1) + (f 2)
+--ooo :: Int -> C
+ooo = BBB
+--ppp = XX.BBB
+
+f a = a
+
+main :: Signal a -> Signal b
+main b = liftS f b
+
+ll = not True || False
