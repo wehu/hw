@@ -257,15 +257,27 @@ table = [
   [op "*" mul AssocLeft, op "/" div AssocLeft],
   [op "+" add AssocLeft, op "-" minus AssocLeft],
   [op "||" lor AssocLeft, op "&&" land AssocLeft],
-  [op ":" cons AssocRight]
+  [op ":" cons AssocRight],
+  [op ">=" ge AssocLeft, op "<=" le AssocLeft,
+   op ">" g AssocLeft, op "<"  l AssocLeft],
+  [op "==" eq AssocLeft, op "/=" ne AssocLeft],
+  [op "|>" lp AssocLeft, op "<|" rp AssocRight]
   ]
   where
     mul a b = A.EApp (A.EVar "*" (A.exprPos a)) [a, b] (A.exprPos a)
     div a b = A.EApp (A.EVar "/" (A.exprPos a)) [a, b] (A.exprPos a)
     add a b = A.EApp (A.EVar "+" (A.exprPos a)) [a, b] (A.exprPos a)
     minus a b = A.EApp (A.EVar "-" (A.exprPos a)) [a, b] (A.exprPos a)
+    eq a b = A.EApp (A.EVar "==" (A.exprPos a)) [a, b] (A.exprPos a)
+    ne a b = A.EApp (A.EVar "/=" (A.exprPos a)) [a, b] (A.exprPos a)
+    ge a b = A.EApp (A.EVar ">=" (A.exprPos a)) [a, b] (A.exprPos a)
+    le a b = A.EApp (A.EVar "<=" (A.exprPos a)) [a, b] (A.exprPos a)
+    g  a b = A.EApp (A.EVar ">" (A.exprPos a)) [a, b] (A.exprPos a)
+    l  a b = A.EApp (A.EVar "<" (A.exprPos a)) [a, b] (A.exprPos a)
     lor a b = A.EApp (A.EVar "||" (A.exprPos a)) [a, b] (A.exprPos a)
     land a b = A.EApp (A.EVar "&&" (A.exprPos a)) [a, b] (A.exprPos a)
+    lp a b = A.EApp b [a] (A.exprPos a)
+    rp a b = A.EApp a [b] (A.exprPos a)
     cons a b = A.EApp (A.EVar ":" (A.exprPos a)) [a, b] (A.exprPos a)
     op s f assoc = Infix (do{reservedOp s; return f}) assoc
 

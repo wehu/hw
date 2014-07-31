@@ -114,6 +114,8 @@ sysSourcePos = newPos "" 0 0
 global_list = ["[]", "()", "True", "False",
                "Signal", "Clk",
                "*", "/", "+", "-", "||", "&&", "not",
+               "==",
+               "|>", "<|",
                "liftS", "liftS2", "foldS", "clk",
                "main",
                ":"]
@@ -152,8 +154,16 @@ addInitEnv m =
   addEnv_ "/" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
   addEnv_ "+" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
   addEnv_ "-" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
+  addEnv_ "==" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TBool))) sysSourcePos $
+  addEnv_ "/=" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TBool))) sysSourcePos $
+  addEnv_ ">=" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TBool))) sysSourcePos $
+  addEnv_ "<=" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TBool))) sysSourcePos $
+  addEnv_ ">" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TBool))) sysSourcePos $
+  addEnv_ "<" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TBool))) sysSourcePos $
   addEnv_ "||" (T.Scheme [] (T.translateFunType $ T.TFun [T.TBool, T.TBool] (T.TBool))) sysSourcePos $
   addEnv_ "&&" (T.Scheme [] (T.translateFunType $ T.TFun [T.TBool, T.TBool] (T.TBool))) sysSourcePos $
+  addEnv_ "|>" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TVar "a", T.TFun [T.TVar "a"] (T.TVar "b")] (T.TVar "b"))) sysSourcePos $
+  addEnv_ "<|" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a"] (T.TVar "b"), T.TVar "b"] (T.TVar "b"))) sysSourcePos $
   addEnv_ "not" (T.Scheme [] (T.translateFunType $ T.TFun [T.TBool] (T.TBool))) sysSourcePos $
   addEnv_ ":" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TCon (T.TCN "[]") [T.TVar "a"]] (T.TVar "a"))) sysSourcePos m
 
