@@ -114,7 +114,7 @@ sysSourcePos = newPos "" 0 0
 global_list = ["[]", "()", "True", "False",
                "Signal", "Clk",
                "*", "/", "+", "-", "||", "&&", "not",
-               "==",
+               "==", "/=", ">=", "<=", ">", "<",
                "|>", "<|",
                "liftS", "liftS2", "foldS", "clk",
                "main",
