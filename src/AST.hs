@@ -2,7 +2,8 @@ module AST(
   Exp(..),
   Con(..),
   Lit(..),
-  exprPos
+  exprPos,
+  translateApp
 ) where
 
 import qualified Data.Map as Map

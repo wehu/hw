@@ -1,6 +1,7 @@
 module Main where
 
-import Resolver as R
+import qualified Transformer as T
+import qualified Resolver as R
 
 import System.Environment
 import System.Console.GetOpt
@@ -24,7 +25,7 @@ processFiles ps [] = return ()
 processFiles ps (f:files) = do
         r <- R.importFile ps f
         case r of
-        	Right m  -> putStrLn $ show m
+        	Right m  -> putStrLn $ T.transform2hs m
         	Left err -> putStrLn err
         processFiles ps files
 
