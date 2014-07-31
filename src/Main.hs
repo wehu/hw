@@ -6,19 +6,19 @@ import System.Environment
 import System.Console.GetOpt
 import Data.List
 
-data Flag = Help | P String
+data Flag = Help | I String
         deriving Eq
 
 options = [ Option ['h'] ["help"] (NoArg Help) "Show help information",
-            Option ['i'] ["inc"] (ReqArg (\s -> P s) "PATH") "Specify search path"]
+            Option ['i'] ["inc"] (ReqArg (\s -> I s) "PATH") "Specify search path"]
 
 parseArgs argv = case getOpt Permute options argv of
         (opts, files, [])
                 | (Help `elem` opts) || (files == []) -> ([], [])
-                | otherwise -> (map (\(P p) -> p) (filter (/=Help) opts), files)
+                | otherwise -> (map (\(I p) -> p) (filter (/=Help) opts), files)
         (_, _, errs) -> (errs, [])
 
-banner = "Usage: test.hs [-h] [-i PATH] [file ...]"
+banner = "Usage: hw [-h] [-i PATH] [file ...]"
 
 processFiles ps [] = return ()
 processFiles ps (f:files) = do
