@@ -22,7 +22,7 @@ banner = "Usage: test.hs [-h] [-i PATH] [file ...]"
 
 processFiles ps [] = return ()
 processFiles ps (f:files) = do
-        r <- R.importFile f
+        r <- R.importFile ps f
         case r of
         	Right m  -> putStrLn $ show m
         	Left err -> putStrLn err

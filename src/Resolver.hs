@@ -10,6 +10,7 @@ import Data.List
 import Control.Monad.Error
 import Control.Monad.State
 import Text.Parsec.Pos (sourceName, sourceLine, sourceColumn)
+import System.Directory
 
 type Modules = Map.Map String M.Module
 
@@ -17,15 +18,15 @@ nullModules = Map.empty
 
 type Resolver a = ErrorT String (StateT Modules IO) a
 
-importModule m n pre = do
+importModule ps m n pre = do
 	ms <- get
 	case Map.lookup n ms of
 		Nothing -> do
-			r <- liftIO $ importFile n
+			r <- liftIO $ importFile ps n
 			case r of
 				Right nm -> do
 					put $ Map.insert n nm ms
-					importModule m n pre
+					importModule ps m n pre
 				Left err -> throwError err
 		Just nm -> do
 		  m <- Map.foldlWithKey
@@ -64,11 +65,11 @@ importModule m n pre = do
 		    (M.env nm)
 		  return m
 
-importModules m =
+importModules ps m =
 	Map.foldlWithKey
 	   (\acc n (pre, pos) -> do
 	   	  m <- acc
-	   	  importModule m n pre
+	   	  importModule ps m n pre
 	   )
 	   (return m)
 	   (M.imports m)
@@ -124,13 +125,28 @@ resolveModuleTypes m = do
     (Map.elems (M.env m))
 
 
-importFile file = do
-  contents <- readFile $ file ++ ".hw"
+importFile ps file = do
+  fn <- foldl'
+          (\acc p ->
+            foldl'
+              (\acc f-> do
+                a <- acc
+                if a == ""
+                then do e <- doesFileExist f
+                        if e then return f else acc
+                else acc
+              )
+              acc
+              [file, file ++ ".hw", p ++ "/" ++ file, p ++ "/" ++ file ++ ".hw"]
+          )
+          (return "")
+          ps
+  contents <- readFile fn
   case P.iParse file contents of
     Left err -> return $ Left $ show err
     Right m -> do
       (r, _) <- runStateT (runErrorT (do
-              m <- importModules $ M.addInitEnv m
+              m <- importModules ps $ M.addInitEnv m
               m <- resolveModuleTypes m
               resolveModuleSource m)) nullModules
       case r of
