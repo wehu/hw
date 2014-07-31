@@ -254,10 +254,10 @@ pattern = do
 expr = buildExpressionParser table factor
 
 table = [
+  [op ":" cons AssocRight],
   [op "*" mul AssocLeft, op "/" div AssocLeft],
   [op "+" add AssocLeft, op "-" minus AssocLeft],
   [op "||" lor AssocLeft, op "&&" land AssocLeft],
-  [op ":" cons AssocRight],
   [op ">=" ge AssocLeft, op "<=" le AssocLeft,
    op ">" g AssocLeft, op "<"  l AssocLeft],
   [op "==" eq AssocLeft, op "/=" ne AssocLeft],
