@@ -261,7 +261,7 @@ table = [
   [op ">=" ge AssocLeft, op "<=" le AssocLeft,
    op ">" g AssocLeft, op "<"  l AssocLeft],
   [op "==" eq AssocLeft, op "/=" ne AssocLeft],
-  [op "|>" lp AssocLeft, op "<|" rp AssocRight]
+  [op "|>" rp AssocRight, op "<|" lp AssocLeft]
   ]
   where
     mul a b = A.EApp (A.EVar "*" (A.exprPos a)) [a, b] (A.exprPos a)
@@ -276,8 +276,8 @@ table = [
     l  a b = A.EApp (A.EVar "<" (A.exprPos a)) [a, b] (A.exprPos a)
     lor a b = A.EApp (A.EVar "||" (A.exprPos a)) [a, b] (A.exprPos a)
     land a b = A.EApp (A.EVar "&&" (A.exprPos a)) [a, b] (A.exprPos a)
-    lp a b = A.EApp b [a] (A.exprPos a)
-    rp a b = A.EApp a [b] (A.exprPos a)
+    rp a b = A.EApp b [a] (A.exprPos a)
+    lp a b = A.EApp a [b] (A.exprPos a)
     cons a b = A.EApp (A.EVar ":" (A.exprPos a)) [a, b] (A.exprPos a)
     op s f assoc = Infix (do{reservedOp s; return f}) assoc
 

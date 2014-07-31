@@ -1,8 +1,8 @@
 module Test3 where
 
-f = 1 |> (\a -> 1 + a) |> (\a -> 3 + a)
+f = 1 |> (\a -> 3 + a)
 
-g = (\a -> 3 + a) <| (\a -> 1 + a) <| 1
+g = (\a b -> a + b) <| 2 <| 2
 
 main = let f = 1 + 2
         in case f of
