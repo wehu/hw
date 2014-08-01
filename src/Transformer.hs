@@ -24,6 +24,7 @@ isCap (x:_) = isUpper x
 
 transform2hs m = 
   "module " ++ (M.name m) ++ " where\n\n" ++
+  defaultImports ++ "\n\n" ++
   Map.foldlWithKey
     (\acc n (h:h':l, _) ->
     	let (T.TCon (T.TCN d) ts) = h
@@ -52,21 +53,28 @@ transform2hs m =
     	     (exp2hs s)
     )
     ""
-    (M.source m) ++ "\n\n" ++
-    "instance Show s => Show (Signal s) where\n" ++
-    "  show (Signal s) = show s\n\n" ++
-    "instance Show (Clk) where\n" ++
-    "  show Clk = \"clk\"\n\n" ++
-    "liftS :: (a -> b) -> Signal a -> Signal b\n" ++
-    "liftS f (Signal s) = Signal $ f s\n\n" ++
-    "liftS2 :: (a -> b -> c) -> Signal a -> Signal b -> Signal c\n" ++
-    "liftS2 f (Signal s1) (Signal s2) = Signal $ f s1 s2\n\n" ++
-    "foldS :: (a -> a -> c) -> Signal a -> Signal c\n" ++
-    "foldS f (Signal s) = Signal $ f s s\n\n" ++
-    "clk :: Signal Clk\n" ++
-    "clk = Signal Clk\n\n" ++
-    "main :: IO ()\n" ++
-    "main = putStrLn $ show main__\n" 
+    (M.source m) ++ "\n\n" ++ builtIn
+
+defaultImports = unlines [
+  "import Control.Parallel"
+  ]
+
+builtIn = unlines [
+  "instance Show s => Show (Signal s) where",
+  "  show (Signal s) = show s",
+  "instance Show (Clk) where",
+  "  show Clk = \"clk\"",
+  "liftS :: (a -> b) -> Signal a -> Signal b",
+  "liftS f (Signal s) = let v = f s; in v `pseq` Signal v",
+  "liftS2 :: (a -> b -> c) -> Signal a -> Signal b -> Signal c",
+  "liftS2 f (Signal s1) (Signal s2) = let v = f s1 s2; in v `pseq` Signal v",
+  "foldS :: (a -> a -> c) -> Signal a -> Signal c",
+  "foldS f (Signal s) = Signal $ f s s",
+  "clk :: Signal Clk",
+  "clk = Signal Clk",
+  "main :: IO ()",
+  "main = putStrLn $ show main__"
+  ]
 
 type2hs (T.TVar n) = hsName n
 type2hs T.TInt     = "Int"

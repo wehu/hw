@@ -18,7 +18,6 @@ yyy = (2, 1)
 ggg (BB aaa) = if False then aaa else aaa
 hhh 1 = case 1 of
             yyy -> 2
-            xxx -> 1
 nnn :: Int -> Int
 nnn a = a
 mmm = nnn 2
