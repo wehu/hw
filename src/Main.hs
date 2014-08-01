@@ -5,6 +5,8 @@ import qualified Resolver as R
 
 import System.Environment
 import System.Console.GetOpt
+import System.Cmd
+import System.Exit
 
 data Flag = Help | I String
         deriving Eq
@@ -24,7 +26,14 @@ processFiles ps [] = return ()
 processFiles ps (f:files) = do
         r <- R.importFile ps f
         case r of
-            Right m  -> writeFile (f ++ ".hs") $ T.transform2hs m
+            Right m  -> do
+                writeFile (f ++ ".hs") $ T.transform2hs m
+                let c = "runghc " ++ f ++ ".hs"
+                 in do ec <- system c
+                       es <- exitSuccess
+                       if ec == es
+                       then return ()
+                       else putStrLn $ "run command `" ++ c ++ "\' failed"
             Left err -> putStrLn err
         processFiles ps files
 
