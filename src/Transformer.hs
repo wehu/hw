@@ -48,11 +48,15 @@ transform2hs m =
     	else acc ++ "\n\n" ++
     	     (case Map.lookup n (M.env m) of
     	     	Nothing -> ""
-    	     	Just ((T.Scheme _ t), _) -> (hsName n) ++ " :: " ++ (type2hs t) ++ "\n") ++
+    	     	Just ((T.Scheme _ t), _) -> (if n == "main" then "main__" else (hsName n)) ++ " :: " ++ (type2hs t) ++ "\n") ++
     	     (exp2hs s)
     )
     ""
-    (M.source m)
+    (M.source m) ++ "\n\n" ++
+    "liftS :: (a -> b) -> Signal a -> Signal b\n" ++
+    "liftS f (Signal s) = Signal $ f s\n\n" ++
+    "main :: IO ()\n" ++
+    "main = do return main__; return ()\n" 
 
 type2hs (T.TVar n) = hsName n
 type2hs T.TInt     = "Int"
@@ -79,6 +83,7 @@ exp2hs (A.ELit (A.LFloat f) _) = show f
 exp2hs (A.ELit (A.LDouble d) _) = show d
 exp2hs (A.ELit (A.LStr s) _) = s
 exp2hs (A.EAbs ps e _) = "(\\" ++ (exp2hsList ps) ++ " -> " ++ (exp2hs e) ++ ")"
+exp2hs (A.EFun "main" ps e _) = "main__ " ++ (exp2hsList ps) ++ " = " ++ (exp2hs e)
 exp2hs (A.EFun n ps e _) = (hsName n) ++ " " ++ (exp2hsList ps) ++ " = " ++ (exp2hs e)
 exp2hs (A.ELet ps e _) = "(let " ++ (foldl' (\acc (a, b)->
                            acc ++ (exp2hs a) ++ " = " ++ (exp2hs b) ++ "; ") "" ps) ++ 
