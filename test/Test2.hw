@@ -8,7 +8,7 @@ aaa :: a -> a -> A (A a)
 aaa aa bb = let a = CCC bb
                 b = BB a
              in b
-bbb = 1 * 2 /4 + 3 - 0
+bbb = 1 * 2  + 3 - 0
 fff = BBB
 eee = 3:[1, 2]
 ggg (BB aaa) = if False then aaa else aaa

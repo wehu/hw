@@ -112,7 +112,7 @@ sysSourcePos = newPos "" 0 0
 
 global_list = ["[]", "()", "True", "False",
                "Signal", "Clk",
-               "*", "/", "+", "-", "||", "&&", "not",
+               "*", "/", "+", "-", "||", "&&", "not", "div", "mod", "rem",
                "==", "/=", ">=", "<=", ">", "<",
                "|>", "<|",
                "liftS", "liftS2", "foldS", "clk",
@@ -150,7 +150,10 @@ addInitEnv m =
   addEnv_ "True" (T.Scheme [] $ T.TBool) sysSourcePos $
   addEnv_ "False" (T.Scheme [] $ T.TBool) sysSourcePos $
   addEnv_ "*" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
-  addEnv_ "/" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
+  addEnv_ "/" (T.Scheme [] (T.translateFunType $ T.TFun [T.TDouble, T.TDouble] (T.TDouble))) sysSourcePos $
+  addEnv_ "div" (T.Scheme [] (T.translateFunType $ T.TFun [T.TInt, T.TInt] (T.TInt))) sysSourcePos $
+  addEnv_ "mod" (T.Scheme [] (T.translateFunType $ T.TFun [T.TInt, T.TInt] (T.TInt))) sysSourcePos $
+  addEnv_ "rem" (T.Scheme [] (T.translateFunType $ T.TFun [T.TInt, T.TInt] (T.TInt))) sysSourcePos $
   addEnv_ "+" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
   addEnv_ "-" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
   addEnv_ "==" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TBool))) sysSourcePos $
@@ -165,7 +168,7 @@ addInitEnv m =
   addEnv_ "<|" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a"] (T.TVar "b"), T.TVar "b"] (T.TVar "b"))) sysSourcePos $
   addEnv_ "not" (T.Scheme [] (T.translateFunType $ T.TFun [T.TBool] (T.TBool))) sysSourcePos $
   addEnv_ "^" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "a"))) sysSourcePos $
-  addEnv_ ":" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TCon (T.TCN "[]") [T.TVar "a"]] (T.TVar "a"))) sysSourcePos m
+  addEnv_ ":" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TCon (T.TCN "[]") [T.TVar "a"]] (T.TCon (T.TCN "[]") [T.TVar "a"]))) sysSourcePos m
 
 
 --prefixType :: String -> T.Type -> T.Type

@@ -11,7 +11,7 @@ aaa :: a -> a -> A (A a)
 aaa aa bb = let a = CCC bb
                 b = BB a
              in b
-bbb = 1 * 2 /4 + 3 - 0
+bbb = (div (1 * 2) 4) + 3 - 0
 fff = BBB
 eee = 3:[1, 2]
 yyy = (2, 1)
@@ -34,5 +34,7 @@ main :: Signal a -> Signal a
 main b = liftS f b
 
 ll = not True || False
+
+ppp = 1.0
 
 
