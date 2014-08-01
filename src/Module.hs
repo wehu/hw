@@ -18,7 +18,6 @@ module Module(
 ) where
 
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Text.Regex.Posix
 import Text.Parsec.Pos (SourcePos, newPos, sourceName, sourceLine, sourceColumn)
 import qualified Text.PrettyPrint as PP
@@ -118,7 +117,7 @@ global_list = ["[]", "()", "True", "False",
                "|>", "<|",
                "liftS", "liftS2", "foldS", "clk",
                "main",
-               ":"]
+               ":", "^"]
 
 prefix m n =
   let pre = name m
@@ -165,6 +164,7 @@ addInitEnv m =
   addEnv_ "|>" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TVar "a", T.TFun [T.TVar "a"] (T.TVar "b")] (T.TVar "b"))) sysSourcePos $
   addEnv_ "<|" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a"] (T.TVar "b"), T.TVar "b"] (T.TVar "b"))) sysSourcePos $
   addEnv_ "not" (T.Scheme [] (T.translateFunType $ T.TFun [T.TBool] (T.TBool))) sysSourcePos $
+  addEnv_ "^" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "a"))) sysSourcePos $
   addEnv_ ":" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TCon (T.TCN "[]") [T.TVar "a"]] (T.TVar "a"))) sysSourcePos m
 
 

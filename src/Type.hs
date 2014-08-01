@@ -5,9 +5,6 @@ module Type (
   isNestedSignalType
 ) where
 
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import Text.Parsec.Pos (SourcePos)
 import qualified Text.PrettyPrint as PP
 
 data Type = TVar String

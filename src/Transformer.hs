@@ -74,9 +74,6 @@ exp2hs (A.ELit (A.LInt i) _) = show i
 exp2hs (A.ELit (A.LFloat f) _) = show f
 exp2hs (A.ELit (A.LDouble d) _) = show d
 exp2hs (A.ELit (A.LStr s) _) = s
-exp2hs (A.ECon (A.CCon n es) _) = "(" ++ (hsName n) ++ " " ++ (exp2hsList es) ++ ")"
-exp2hs (A.EApp f [a] _) = "(" ++ (exp2hs f) ++ " " ++ (exp2hs a) ++ ")"
-exp2hs e@(A.EApp f ps _) = exp2hs $ A.translateApp e
 exp2hs (A.EAbs ps e _) = "(\\" ++ (exp2hsList ps) ++ " -> " ++ (exp2hs e) ++ ")"
 exp2hs (A.EFun n ps e _) = (hsName n) ++ " " ++ (exp2hsList ps) ++ " = " ++ (exp2hs e)
 exp2hs (A.ELet ps e _) = "(let " ++ (foldl' (\acc (a, b)->
@@ -86,7 +83,29 @@ exp2hs (A.EIf c a b _) = "(if " ++ (exp2hs c) ++ " then " ++ (exp2hs a) ++ " els
 exp2hs (A.ECase e ps _) = "(case " ++ (exp2hs e) ++ " of " ++
                           (foldl' (\acc (a, b)-> acc ++ (exp2hs a) ++ " -> "
                             ++ (exp2hs b) ++ "; ") "" ps) ++ ")"
-
+exp2hs (A.EApp (A.EVar "*" _) [a, b] _) = "(" ++ (exp2hs a) ++ " * " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "/" _) [a, b] _) = "(" ++ (exp2hs a) ++ " / " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "+" _) [a, b] _) = "(" ++ (exp2hs a) ++ " + " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "-" _) [a, b] _) = "(" ++ (exp2hs a) ++ " - " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "||" _) [a, b] _) = "(" ++ (exp2hs a) ++ " || " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "&&" _) [a, b] _) = "(" ++ (exp2hs a) ++ " && " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar ":" _) [a, b] _) = "(" ++ (exp2hs a) ++ " : " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "^" _) [a, b] _) = "(" ++ (exp2hs a) ++ " ^ " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "==" _) [a, b] _) = "(" ++ (exp2hs a) ++ " == " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "/=" _) [a, b] _) = "(" ++ (exp2hs a) ++ " /= " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar ">=" _) [a, b] _) = "(" ++ (exp2hs a) ++ " >= " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "<=" _) [a, b] _) = "(" ++ (exp2hs a) ++ " <= " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar ">" _) [a, b] _) = "(" ++ (exp2hs a) ++ " > " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "<" _) [a, b] _) = "(" ++ (exp2hs a) ++ " < " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "|>" _) [a, b] _) = "(" ++ (exp2hs a) ++ " |> " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp (A.EVar "<|" _) [a, b] _) = "(" ++ (exp2hs a) ++ " <| " ++ (exp2hs b) ++ ")"
+exp2hs (A.EApp f ps _) = "(" ++ (exp2hs f) ++ " " ++ (exp2hsList ps) ++ ")"
+exp2hs (A.ECon (A.CCon "[]" []) _) = "[]"
+exp2hs (A.ECon (A.CCon "[]" (e:es)) _) = "[" ++ (foldl' (\acc e -> acc ++ ", " ++ (exp2hs e)) (exp2hs e) es) ++ "]"
+exp2hs (A.ECon (A.CCon "()" []) _) = "()"
+exp2hs (A.ECon (A.CCon "()" (e:es)) _) = "(" ++ (foldl' (\acc e -> acc ++ ", " ++ (exp2hs e)) (exp2hs e) es) ++ ")"
+exp2hs (A.ECon (A.CCon n []) _) = hsName n
+exp2hs (A.ECon (A.CCon n es) _) = "(" ++ (hsName n) ++ " " ++ (exp2hsList es) ++ ")"
 
 exp2hsList [] = ""
 exp2hsList (x:xs) = (exp2hs x) ++ " " ++ (exp2hsList xs)

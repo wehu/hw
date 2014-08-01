@@ -5,7 +5,6 @@ import qualified Resolver as R
 
 import System.Environment
 import System.Console.GetOpt
-import Data.List
 
 data Flag = Help | I String
         deriving Eq

@@ -115,31 +115,29 @@ resolveTypeList ts (x:ps) pos = do
   resolveTypeList ts ps pos
 
 resolveModuleTypes m = do
-  foldl'
-    (\acc ((T.Scheme _ s), pos) -> do
-       m <- acc
+  foldM
+    (\m ((T.Scheme _ s), pos) -> do
        resolveType (M.types m) s pos
        return m
     )
-    (return m)
+    m
     (Map.elems (M.env m))
 
 
 importFile ps file = do
-  fn <- foldl'
+  fn <- foldM
           (\acc p ->
-            foldl'
-              (\acc f-> do
-                a <- acc
+            foldM
+              (\a f -> do
                 if a == ""
                 then do e <- doesFileExist f
-                        if e then return f else acc
-                else acc
+                        if e then return f else return a
+                else return a
               )
               acc
               [file, file ++ ".hw", p ++ "/" ++ file, p ++ "/" ++ file ++ ".hw"]
           )
-          (return "")
+          ""
           ps
   contents <- readFile (if fn == "" then file else fn)
   case P.iParse file contents of

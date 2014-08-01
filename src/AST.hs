@@ -6,8 +6,6 @@ module AST(
   translateApp
 ) where
 
-import qualified Data.Map as Map
-import qualified Data.Set as Set
 import Text.Parsec.Pos (SourcePos)
 import qualified Text.PrettyPrint as PP
 
@@ -35,6 +33,7 @@ data Lit = LInt   Integer
          deriving (Eq, Ord)
 
 
+exprPos :: Exp -> EPos
 exprPos (EVar _ pos) = pos
 exprPos (ELit _ pos) = pos
 exprPos (ECon _ pos) = pos
@@ -48,6 +47,7 @@ exprPos (ECase _ _ pos) = pos
 instance Show (Exp) where
   showsPrec _ x = shows $ prExp x
 
+prExp :: Exp -> PP.Doc
 prExp (EVar n _) = PP.text n
 prExp (ELit (LBool True) _) = PP.text "True"
 prExp (ELit (LBool False) _) = PP.text "False"
@@ -57,7 +57,7 @@ prExp (ELit (LDouble d) _) = PP.double d
 prExp (ELit (LStr s) _) = PP.text s
 prExp (ECon (CCon n es) _) = PP.parens $ PP.text n PP.<+> prExpList es
 prExp (EApp f [a] _) = PP.parens $ prExp f PP.<+> prExp a
-prExp e@(EApp f ps _) = prExp $ translateApp e
+prExp e@(EApp _ _ _) = prExp $ translateApp e
 prExp (EAbs ps e _) = PP.parens $ PP.text "\\" PP.<+> prExpList ps
                       PP.<+> PP.text "->" PP.<+> prExp e
 prExp (EFun n ps e _) = PP.text n PP.<+> prExpList ps PP.<+> PP.text "=" PP.<+> prExp e
@@ -70,8 +70,10 @@ prExp (ECase e ps _) = PP.text "case" PP.<+> prExp e PP.<+> PP.text "of"
                        PP.<+> (PP.sep $ map (\(a, b)-> PP.text "\n" PP.<+>
                        prExp a PP.<+> PP.text "->" PP.<+> prExp b) ps)
 
+prExpList :: [Exp] -> PP.Doc
 prExpList [] = PP.text ""
 prExpList (x:ps) = prExp x PP.<+> prExpList ps
 
-translateApp e@(EApp f [a] pos) = e
+translateApp :: Exp -> Exp
+translateApp e@(EApp _ [_] _) = e
 translateApp (EApp f (t:l) pos) = translateApp $ EApp (EApp f [t] pos) l pos

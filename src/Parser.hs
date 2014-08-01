@@ -104,7 +104,7 @@ modDef = do
       <+/> capIdent
       -- <+/> (indentParens lexer (commaSep ((\pos e-> (pos, e)) <$> getPosition <*> identifier)) <|> return [])
       <+/> reserved "where" <?> "module declare"
-  endLine
+  --endLine
   m <- getState
   setState $ foldl' (\acc (pos, n) -> M.addExport n pos acc) (M.setName b m) c
   (try (modImport <?> "import") <|> return [()])
@@ -112,7 +112,7 @@ modDef = do
   modBody <?> "module body"
   getState
 
-endLine = many semi
+--endLine = many semi
 
 modImport = do
   block $ do
@@ -121,7 +121,7 @@ modImport = do
         in (return f) <+/> reserved "import" <+/> capIdent <+/> reserved "as" <+/> capIdent)
       <|> (withPos $ let f _ b = (b, "")
         in (return f) <+/> reserved "import" <+/> capIdent))
-    endLine
+    --endLine
     m <- getState
     setState $ M.addImport b c pos m
     return ()
@@ -136,7 +136,7 @@ dataDecl = do
   pos <- getPosition
   (b, c, e) <- withPos $ let f _ b c _ e = (b, c, e)
     in return f <+/> reservedOp "data" <+/> capIdent <+/> (many ident) <+/> reservedOp "=" <+/> (dataAlter <?> "data declare")
-  endLine
+  --endLine
   foldl'
     (\acc (n, ps, pos) -> do
       if (Set.fromList c /= TI.ftv ps)
@@ -208,7 +208,7 @@ funcType = do
   pos <- getPosition
   (n, t) <- withPos $ let f a _ c = (a, c)
     in (return f) <+/> ident <+/> reservedOp "::" <+/> typeDecl
-  endLine
+  --endLine
   m <- getState
   modifyModuleOrFail $ M.addEnv n (T.Scheme (Set.toList $ TI.ftv t) t) pos m
   return ()
@@ -217,7 +217,7 @@ funcBody = do
   pos <- getPosition
   (n, ps, e) <- withPos $ let f a b _ d = (a, b, d)
     in (return f) <+/> ident <+/> (many pattern) <+/> reservedOp "=" <+/> expr
-  endLine
+  --endLine
   m <- getState
   modifyModuleOrFail $ M.addSource n (A.EFun n ps e pos) m
   return ()
@@ -254,7 +254,7 @@ pattern = do
 expr = buildExpressionParser table factor
 
 table = [
-  [op ":" cons AssocRight],
+  [op ":" cons AssocRight, op "^" epn AssocLeft],
   [op "*" mul AssocLeft, op "/" div AssocLeft],
   [op "+" add AssocLeft, op "-" minus AssocLeft],
   [op "||" lor AssocLeft, op "&&" land AssocLeft],
@@ -279,6 +279,7 @@ table = [
     rp a b = A.EApp b [a] (A.exprPos a)
     lp a b = A.EApp a [b] (A.exprPos a)
     cons a b = A.EApp (A.EVar ":" (A.exprPos a)) [a, b] (A.exprPos a)
+    epn a b = A.EApp (A.EVar "^" (A.exprPos a)) [a, b] (A.exprPos a)
     op s f assoc = Infix (do{reservedOp s; return f}) assoc
 
 factor = do
