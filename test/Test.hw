@@ -30,8 +30,8 @@ ooo = BBB
 
 f a = a
 
-main :: Signal a -> Signal a 
-main b = liftS f b
+main :: Signal Clk
+main = liftS (\a -> a) clk
 
 ll = not True || False
 

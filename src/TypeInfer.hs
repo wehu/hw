@@ -156,6 +156,8 @@ typeMismatch e t1 t2 = throwError $
                          ++ ")" ++ "\n\n" ++ (show e) ++ "\n"
 
 unify :: A.Exp -> T.Type -> T.Type -> TI SubSt
+unify e (T.TFun [] r) t = unify e r t
+unify e t (T.TFun [] r) = unify e t r
 unify e (T.TFun l r) (T.TFun l' r') = do
   if length l /= length l'
   then typeMismatch e l l'
@@ -445,7 +447,7 @@ resolve n = do
               Just (T.Scheme var tc) -> do
                 s <- unify e t tc
                 (let nt = subSt s t
-                 in (if nt /= tc
+                 in (if nt /= tc && n /= "main"
                      then typeMismatch e nt tc
                      else do
                             st <- generalize nullEnv nt

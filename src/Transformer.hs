@@ -53,10 +53,20 @@ transform2hs m =
     )
     ""
     (M.source m) ++ "\n\n" ++
+    "instance Show s => Show (Signal s) where\n" ++
+    "  show (Signal s) = show s\n\n" ++
+    "instance Show (Clk) where\n" ++
+    "  show Clk = \"clk\"\n\n" ++
     "liftS :: (a -> b) -> Signal a -> Signal b\n" ++
     "liftS f (Signal s) = Signal $ f s\n\n" ++
+    "liftS2 :: (a -> b -> c) -> Signal a -> Signal b -> Signal c\n" ++
+    "liftS2 f (Signal s1) (Signal s2) = Signal $ f s1 s2\n\n" ++
+    "foldS :: (a -> a -> c) -> Signal a -> Signal c\n" ++
+    "foldS f (Signal s) = Signal $ f s s\n\n" ++
+    "clk :: Signal Clk\n" ++
+    "clk = Signal Clk\n\n" ++
     "main :: IO ()\n" ++
-    "main = do return main__; return ()\n" 
+    "main = putStrLn $ show main__\n" 
 
 type2hs (T.TVar n) = hsName n
 type2hs T.TInt     = "Int"

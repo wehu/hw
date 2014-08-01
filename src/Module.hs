@@ -168,7 +168,8 @@ addInitEnv m =
   addEnv_ "<|" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a"] (T.TVar "b"), T.TVar "b"] (T.TVar "b"))) sysSourcePos $
   addEnv_ "not" (T.Scheme [] (T.translateFunType $ T.TFun [T.TBool] (T.TBool))) sysSourcePos $
   addEnv_ "^" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "a"))) sysSourcePos $
-  addEnv_ ":" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TCon (T.TCN "[]") [T.TVar "a"]] (T.TCon (T.TCN "[]") [T.TVar "a"]))) sysSourcePos m
+  addEnv_ ":" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TCon (T.TCN "[]") [T.TVar "a"]] (T.TCon (T.TCN "[]") [T.TVar "a"]))) sysSourcePos $
+  addEnv_ "main" (T.Scheme ["a"] $ T.TFun [] (T.TCon (T.TCN "Signal") [T.TVar "a"])) sysSourcePos m
 
 
 --prefixType :: String -> T.Type -> T.Type
