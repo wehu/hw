@@ -5,7 +5,7 @@ import qualified Resolver as R
 
 import System.Environment
 import System.Console.GetOpt
-import System.Cmd
+import System.Process
 import System.Exit
 
 data Flag = Help | I String
