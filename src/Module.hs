@@ -144,8 +144,9 @@ addInitEnv m =
   addEnv_ "liftS2" (T.Scheme ["a", "b", "c"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "c"),
      (T.TCon (T.TCN "Signal") [T.TVar "a"]), (T.TCon (T.TCN "Signal") [T.TVar "b"])]
     (T.TCon (T.TCN "Signal") [T.TVar "c"]))) sysSourcePos $
-  addEnv_ "foldS" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "b"),
-     (T.TCon (T.TCN "Signal") [T.TVar "a"])] (T.TCon (T.TCN "Signal") [T.TVar "b"]))) sysSourcePos $
+  addEnv_ "foldS" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "a"),
+     (T.TVar "a"),
+     (T.TCon (T.TCN "Signal") [T.TVar "b"])] (T.TCon (T.TCN "Signal") [T.TVar "a"]))) sysSourcePos $
   addEnv_ "clk" (T.Scheme [] (T.TCon (T.TCN "Signal") [T.TCon (T.TCN "Clk") []])) sysSourcePos $
   addEnv_ "True" (T.Scheme [] $ T.TBool) sysSourcePos $
   addEnv_ "False" (T.Scheme [] $ T.TBool) sysSourcePos $
