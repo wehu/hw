@@ -1,4 +1,7 @@
-module Resolver where
+module Resolver(
+  initEnvForResolver,
+  importFile
+) where
 
 import qualified TypeInfer as TI
 import qualified Type as T
@@ -74,16 +77,17 @@ importModules ps m =
 	   (return m)
 	   (M.imports m)
 
+initEnvForResolver m = TI.typeState 0
+                          (TI.TypeEnv $ Map.map (\(s, _)->s) $ M.env m)
+                          (M.source m)
+                          TI.nullResolved
+
 resolveModuleSource m =
   Map.foldlWithKey
    (\acc n e ->
     do
       m <- acc
-      res <- liftIO $ TI.runResolve n $
-             TI.typeState 0
-                          (TI.TypeEnv $ Map.map (\(s, _)->s) $ M.env m)
-                          (M.source m)
-                          TI.nullResolved
+      res <- liftIO $ TI.runResolve n $ initEnvForResolver m
       case res of
         (Right s, _) -> do
           return $ M.addEnv_ n s (A.exprPos e) m

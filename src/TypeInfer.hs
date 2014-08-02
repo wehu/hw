@@ -4,10 +4,12 @@ module TypeInfer(
   Types(..),
   TypeEnv(..),
   Node(..),
+  ftvPat,
   ti,
   typeState,
   nullResolved,
-  runResolve
+  runResolve,
+  nullEnv
 ) where
 
 import qualified Data.Map as Map
@@ -240,8 +242,10 @@ genPat (TypeEnv env) pat =
          return (TypeEnv env', subSt s'' t, n)
 
 data Node =
-  NN A.Exp T.Type (Maybe Node)
+  NN A.Exp T.Type (Node)
   | NB [Node]
+
+nullNB = NB []
 
 mergeNode n1@(NN _ _ _) n2@(NN _ _ _) = NB [n1, n2]
 mergeNode n1@(NN _ _ _) (NB n2) = NB (n1:n2)
@@ -258,26 +262,26 @@ ti (TypeEnv env) e@(A.EVar a _) = do
            Nothing -> do
              (T.Scheme _ t) <- resolve a
              checkNestSignalType e t
-             return (nullSubSt, t, NN e t Nothing)
+             return (nullSubSt, t, NN e t nullNB)
            Just s -> do
              t <- instantiate s
              checkNestSignalType e t
-             return (nullSubSt, t, NN e t Nothing)
+             return (nullSubSt, t, NN e t nullNB)
     Just s  -> do
       t <- instantiate s
       checkNestSignalType e t
-      return (nullSubSt, t, NN e t Nothing)
-ti _ e@(A.ELit (A.LInt _) _) = return (nullSubSt, T.TInt, NN e T.TInt Nothing)
-ti _ e@(A.ELit (A.LBool _) _) = return (nullSubSt, T.TBool, NN e T.TBool Nothing)
-ti _ e@(A.ELit (A.LStr _) _) = return (nullSubSt, T.TStr, NN e T.TStr Nothing)
-ti _ e@(A.ELit (A.LFloat _) _) = return (nullSubSt, T.TFloat, NN e T.TFloat Nothing)
-ti _ e@(A.ELit (A.LDouble _) _) = return (nullSubSt, T.TDouble, NN e T.TDouble Nothing)
+      return (nullSubSt, t, NN e t nullNB)
+ti _ e@(A.ELit (A.LInt _) _) = return (nullSubSt, T.TInt, NN e T.TInt nullNB)
+ti _ e@(A.ELit (A.LBool _) _) = return (nullSubSt, T.TBool, NN e T.TBool nullNB)
+ti _ e@(A.ELit (A.LStr _) _) = return (nullSubSt, T.TStr, NN e T.TStr nullNB)
+ti _ e@(A.ELit (A.LFloat _) _) = return (nullSubSt, T.TFloat, NN e T.TFloat nullNB)
+ti _ e@(A.ELit (A.LDouble _) _) = return (nullSubSt, T.TDouble, NN e T.TDouble nullNB)
 ti env e@(A.ECon (A.CCon "[]" []) _) = do
   t <- newTVar "a"
   let nt = T.TCon (T.TCN "[]") [t]
    in (do
         checkNestSignalType e nt
-        return (nullSubSt, nt, NN e nt Nothing))
+        return (nullSubSt, nt, NN e nt nullNB))
 ti env e@(A.ECon (A.CCon "[]" cs@(h:ps)) _) = do
   (s, t, n) <- foldl'
               (\acc p ->
@@ -291,13 +295,13 @@ ti env e@(A.ECon (A.CCon "[]" cs@(h:ps)) _) = do
   let nt = T.TCon (T.TCN "[]") [t]
    in do
         checkNestSignalType e nt
-        return (s, nt, NN e nt (Just n))
+        return (s, nt, NN e nt n)
 ti env e@(A.ECon (A.CCon c []) pos) =
   if c == "()"
   then
     let t = T.TCon (T.TCN "()") []
      in do checkNestSignalType e t
-           return $ (nullSubSt, t, NN e t Nothing)
+           return $ (nullSubSt, t, NN e t nullNB)
   else ti env (A.EVar c pos)
 ti env e@(A.ECon (A.CCon c ps) pos) =
   if c == "()"
@@ -308,12 +312,12 @@ ti env e@(A.ECon (A.CCon c ps) pos) =
         (s1, t, n2) <- ti (subSt s env) e
         return (s1, ot ++ [t], mergeNode n1 n2)
       )
-      (return (nullSubSt, [], NB []))
+      (return (nullSubSt, [], nullNB))
       ps
     let t = subSt s $ T.TCon (T.TCN "()") ts
      in do
          checkNestSignalType e t
-         return $ (s, t, NN e t (Just n))
+         return $ (s, t, NN e t n)
   else ti env (A.EApp (A.EVar c pos) ps pos)
 ti env e@(A.EApp a [] _) =
   do nt <- newTVar "a"
@@ -321,7 +325,7 @@ ti env e@(A.EApp a [] _) =
      s' <- unify e t (T.TFun [] nt)
      let nt' = subSt s' nt
       in do checkNestSignalType e nt'
-            return (s `combineSubSt` s', nt', NN e nt' (Just n))
+            return (s `combineSubSt` s', nt', NN e nt' (NB [n]))
 ti env e@(A.EApp a ps _) =
   do nt <- newTVar "a"
      (sa, ta, na) <- ti env a
@@ -337,7 +341,7 @@ ti env e@(A.EApp a ps _) =
      s <- unify e ta (T.translateFunType $ T.TFun tp nt)
      let nt' = subSt s nt
       in do checkNestSignalType e nt'
-            return (s `combineSubSt` sp `combineSubSt` sa, nt', NN e nt' (Just $ mergeNode na np))
+            return (s `combineSubSt` sp `combineSubSt` sa, nt', NN e nt' (mergeNode na np))
 ti env ae@(A.EAbs cs e pos) =
   do (env1, ts, n1) <- let (h:tl) = cs
                            th = (do
@@ -353,14 +357,14 @@ ti env ae@(A.EAbs cs e pos) =
      (s, t, n2) <- ti env1 e
      let nt = subSt s $ T.translateFunType $ T.TFun ts t
       in do checkNestSignalType ae nt
-            return (s, nt, NN ae nt (Just $ mergeNode n1 n2))
+            return (s, nt, NN ae nt n2)
 ti env fe@(A.EFun n [] e pos) =
   do (s, t, nn) <- ti env e
      (let ft = subSt s t
-      in (do ns <- generalize (remove env n) ft
+      in (do --ns <- generalize (remove env n) ft
              --addGlobalEnv n ns
              checkNestSignalType fe ft
-             return (s, ft, NN fe ft (Just nn))))
+             return (s, ft, NN fe ft nn)))
 ti env fe@(A.EFun n cs e pos) =
   do (env1, ts, n1) <- let (h:tl) = cs
                            th = (do
@@ -375,10 +379,10 @@ ti env fe@(A.EFun n cs e pos) =
                           tl
      (s, t, n2) <- ti env1 e
      (let ft = subSt s $ T.translateFunType $ T.TFun ts t
-      in (do ns <- generalize (remove env n) ft
+      in (do --ns <- generalize (remove env n) ft
              --addGlobalEnv n ns
              checkNestSignalType fe ft
-             return (s, ft, NN fe ft (Just $ mergeNode n1 n2))))
+             return (s, ft, NN fe ft n2)))
 ti env le@(A.ELet ps e pos) = 
   do (env1, s1, t1, n1) <- let ((c, e):tl) = ps
                                th = (do
@@ -386,7 +390,7 @@ ti env le@(A.ELet ps e pos) =
                                       (s2, t2, n2) <- ti env e
                                       s3 <- unify le (subSt s2 t1) (subSt s2 t2)
                                       env2 <- generalizeL (subSt s3 env1) (Set.toList (ftvPat c))
-                                      return (env2, s2 `combineSubSt` s3, subSt s3 t2, mergeNode n1 n2))
+                                      return (env2, s2 `combineSubSt` s3, subSt s3 t2, n2))
                            in foldl'
                                 (\acc (c, e) ->
                                    do (TypeEnv env1, s1, t1, n1) <- acc
@@ -394,14 +398,14 @@ ti env le@(A.ELet ps e pos) =
                                       (s3, t3, n3) <- ti (subSt s1 (TypeEnv env1)) e
                                       s4 <- unify le (subSt s3 t2) (subSt s3 t3)
                                       env3 <- generalizeL (subSt s4 (TypeEnv env2)) (Set.toList (ftvPat c))
-                                      return (TypeEnv $ env2 `Map.union` env1,  s1 `combineSubSt` s3 `combineSubSt` s4, subSt s4 t3, mergeNode n1 $ mergeNode n2 n3)
+                                      return (TypeEnv $ env2 `Map.union` env1,  s1 `combineSubSt` s3 `combineSubSt` s4, subSt s4 t3, mergeNode n1 n3)
                                 )
                                 th
                                 tl
      (s2, t2, n2) <- ti (subSt s1 env1) e
      let t = subSt s2 t2
       in do checkNestSignalType le t
-            return (s1 `combineSubSt` s2, t, NN le t (Just $ mergeNode n1 n2))
+            return (s1 `combineSubSt` s2, t, NN le t (mergeNode n1 n2))
 ti env e@(A.EIf c e1 e2 pos) =
   do (s1, t1, n1) <- ti env c
      if t1 /= T.TBool
@@ -412,7 +416,7 @@ ti env e@(A.EIf c e1 e2 pos) =
             s4 <- unify e (subSt s1 t2) (subSt s1 t3)
             let t = subSt s4 t2
              in do checkNestSignalType e t
-                   return (s1 `combineSubSt` s2 `combineSubSt` s3 `combineSubSt` s4, t, NN e t (Just $ mergeNode n1 $ mergeNode n2 n3))
+                   return (s1 `combineSubSt` s2 `combineSubSt` s3 `combineSubSt` s4, t, NN e t (mergeNode n1 $ mergeNode n2 n3))
 ti env ce@(A.ECase e ps pos) =
   do (s1, t1, n1) <- ti env e
      (s2, t2, n2) <- let ((c, e):tl) = ps
@@ -420,7 +424,7 @@ ti env ce@(A.ECase e ps pos) =
                                 (env2, t2, n1) <- genPat env c
                                 s3 <- unify ce t1 t2
                                 (s4, t4, n2) <- ti (subSt (s1 `combineSubSt` s3) env2) e
-                                return (s3 `combineSubSt` s4, subSt s4 t4, mergeNode n1 n2))
+                                return (s3 `combineSubSt` s4, subSt s4 t4, n2))
                      in foldl'
                           (\acc (c, e) ->
                              do
@@ -429,13 +433,13 @@ ti env ce@(A.ECase e ps pos) =
                                s4 <- unify ce t1 t3
                                (s5, t5, n3) <- ti (subSt (s1 `combineSubSt` s2 `combineSubSt` s4) env3) e
                                s6 <- unify ce (subSt s5 t2) (subSt s5 t5)
-                               return (s4 `combineSubSt` s5 `combineSubSt` s6, subSt s6 t5, mergeNode n1 $ mergeNode n2 n3)
+                               return (s4 `combineSubSt` s5 `combineSubSt` s6, subSt s6 t5, mergeNode n1 n3)
                           )
                           th
                           tl
      let t = subSt s2 t2
       in do checkNestSignalType ce t
-            return (s1 `combineSubSt` s2, t, NN ce t (Just $ mergeNode n1 n2))
+            return (s1 `combineSubSt` s2, t, NN ce t (mergeNode n1 n2))
 
 resolve n = do
   r <- getResolved

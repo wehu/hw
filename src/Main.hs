@@ -3,6 +3,9 @@ module Main where
 import qualified Transformer as T
 import qualified Resolver as R
 
+import Control.Monad.Error
+import Control.Monad.State
+
 import System.Environment
 import System.Console.GetOpt
 import System.Process
@@ -27,13 +30,17 @@ processFiles ps (f:files) = do
         r <- R.importFile ps f
         case r of
             Right m  -> do
-                writeFile (f ++ ".hs") $ T.transform2hs m
-                let c = "runghc " ++ f ++ ".hs"
-                 in do ec <- system c
-                       es <- exitSuccess
-                       if ec == es
-                       then return ()
-                       else putStrLn $ "run command `" ++ c ++ "\' failed"
+                rr <- (runStateT $ runErrorT $ T.transform2hs m) T.nullSignalState
+                case rr of
+                    (Right res, _) -> do
+                        writeFile (f ++ ".hs") res
+                        let c = "runghc " ++ f ++ ".hs"
+                         in do ec <- system c
+                               es <- exitSuccess
+                               if ec == es
+                               then return ()
+                               else putStrLn $ "run command `" ++ c ++ "\' failed"
+                    (Left err, _) -> putStrLn err
             Left err -> putStrLn err
         processFiles ps files
 
