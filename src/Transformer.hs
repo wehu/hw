@@ -140,8 +140,20 @@ transform2hs m = do
              (M.source m) ++ "\n\n" -}
            (case Map.lookup "main" (M.env m) of
                     Nothing -> ""
-                    Just ((T.Scheme _ t), _) -> "main__ :: " ++ (type2hs t) ++ "\n")
-           ++ "main__ = " ++ c ++ "\n\n"
+                    Just ((T.Scheme _ t), _) -> "main__ :: Int -> " ++ (type2hs t) ++ "\n")
+           ++ "main__ i = do\n"
+           ++ "  v <- "++ c ++ "\n"
+           ++ "  m <- get\n"
+           ++ "  let clk = case Map.lookup \"clk\" m of\n"
+           ++ "              Nothing -> (0::Int)\n"
+           ++ "              Just v -> ((getSignalValue v)::Int)\n"
+           ++ "   in put $ Map.insert \"clk\" (setSignalValue (clk + 1)) m\n"
+           ++ "  if i < 100\n"
+           ++ "  then do\n"
+           ++ "         liftIO $ putStrLn $ show v\n"
+           ++ "         main__ (i + 1)\n"
+           ++ "  else return v\n"
+           ++ "\n\n"
            ++ builtIn ++ "\n\n"
    in do
         (_, ts) <- get
@@ -194,7 +206,7 @@ builtIn = unlines [
   "int2Clk i = i",
   "main :: IO ()",
   "main = do",
-  "  res <- (runStateT $ runErrorT main__) Map.empty",
+  "  res <- (runStateT $ runErrorT (main__ 0)) Map.empty",
   "  case res of",
   "    (Right d, _) -> putStrLn $ show d",
   "    (Left err, _) -> putStrLn err",
