@@ -417,12 +417,13 @@ node2hs (TI.NN (A.EApp (A.EVar "foldS" _) _ _) (T.TCon _ [t]) (TI.NB [_, a, b, c
      ++ (type2hs t) ++ "))"
      ++ r1 ++ " " ++ r2 ++ " " ++ r3 ++ "); put $ Map.insert \"" 
      ++ (show i) ++ "\" (setSignalValue v) m; return v)"
-node2hs (TI.NN (A.EApp (A.EVar "liftS" _) _ _) (T.TCon _ [t]) (TI.NB [_, a, b])) = do
+{-node2hs (TI.NN (A.EApp (A.EVar "liftS" _) _ _) (T.TCon _ [t]) (TI.NB [_, a, b])) = do
   (i, ts) <- get
   put $ (i + 1, Set.insert t ts)
   r1 <- (node2hs a)
   r2 <- (node2hs b)
   return $ "(liftS " ++ r1 ++ " " ++ r2 ++ ")"
+--}
 node2hs (TI.NN (A.EApp f _ _) t n) = do
   r <- (node2hsList n " ")
   return $ "(" ++ r ++ ")"
