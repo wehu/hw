@@ -255,7 +255,7 @@ genPat (TypeEnv env) pat =
                             (return (env'', nullSubSt))
                             vs
          (s'', t, n) <- ti (subSt s' (TypeEnv env')) pat
-         return (TypeEnv env', subSt s'' t, n)
+         return (subSt s'' $ TypeEnv env', subSt s'' t, n)
 
 data Node =
   NN A.Exp T.Type (Node)
