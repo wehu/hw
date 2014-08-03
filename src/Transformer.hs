@@ -22,14 +22,14 @@ import qualified Data.ByteString.Char8 as BSC
 
 replace a b [] = []
 replace a b s@(x:xs) =
-  if a == x
+  if elem x a
   then b ++ (replace a b xs)
   else x:(replace a b xs)
 
 hsName n =
   if n =~ "\\."
   then let [[m, p, c]] = (n =~ "(.*)\\.(.*)" :: [[String]])
-        in replace '.' "__" $ c ++ "__" ++ p 
+        in replace ['.'] "__" $ c ++ "__" ++ p 
   else n
 
 isCap (x:_) = isUpper x
@@ -162,7 +162,7 @@ transform2hs clk m = do
                   [] -> "\n\n"
                   [t] -> "data SignalValue = T" ++ (uniqTC t) ++ " " ++ (type2hs t) ++ "\n\n"
                   (x:xs) -> "data SignalValue = \n  " ++ (foldl' (\acc t-> acc ++ "\n  | T" ++ (uniqTC t) ++ " " ++ (type2hs t))
-                             (type2hs x) xs) ++ "\n\n"
+                             ("T" ++ (uniqTC x) ++ " " ++ (type2hs x)) xs) ++ "\n\n"
             r2 = foldl' (\acc t -> acc ++ "\ninstance SignalClass " ++ (type2hs t) ++ " where\n"
                           ++ "  getSignalValue (T" ++ (uniqTC t) ++ " i) = i\n"
                           ++ "  setSignalValue i = (T" ++ (uniqTC t) ++ " i)\n") "" (Set.toList ts)
@@ -170,7 +170,7 @@ transform2hs clk m = do
 
 uniqTC t = 
   let s = show $ MD5.hash $ BSC.pack $ type2hs t
-   in replace '\\' "_" $ replace '\"' "" $ replace '&' "_" s
+   in replace ['\\', '\"', '&', '[', ']', '/'] "_" s
 
 defaultImports = unlines [
   "import Control.Parallel",

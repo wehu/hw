@@ -16,7 +16,7 @@ fff = BBB
 eee = 3:[1, 2]
 yyy = (2, 1)
 ggg (BB aaa) = if False then aaa else aaa
-hhh 1 = case 1 of
+hhh x b = case 1 of
             yyy -> 2
 nnn :: Int -> Int
 nnn a = a
@@ -29,8 +29,10 @@ ooo = BBB
 
 f a = a
 
-main :: Signal Clk
-main = liftS (\a -> a) clk
+main :: Signal Int
+main = liftS2 (\s1 s2 -> 1.0) <| liftS (\a -> hhh (clk2Int a) 0) clk <| oo
+
+oo = foldS (\a i -> a) 0.0 clk
 
 ll = not True || False
 
