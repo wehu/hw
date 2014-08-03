@@ -34,7 +34,7 @@ main = liftS2 (\(NN s1) s2 -> (s1 0) + 0) <| pp <| oo
 
 oo = foldS (\a i -> a) 0 clk
 
-pp = foldS (\a i -> a) (NN (\f -> 1 + f)) clk
+pp = foldS (\a i -> a) (NN (\f -> 1 )) clk
 
 ll = not True || False
 
