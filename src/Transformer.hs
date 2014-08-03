@@ -17,13 +17,14 @@ import Data.Char
 import Control.Monad.Error
 import Control.Monad.State
 
---import qualified Data.Hash.MD5 as MD5
+import qualified Crypto.Hash.MD5 as MD5
+import qualified Data.ByteString.Char8 as BSC
 
 replace a b [] = []
 replace a b s@(x:xs) =
   if a == x
-  then b ++ xs
-  else s
+  then b ++ (replace a b xs)
+  else x:(replace a b xs)
 
 hsName n =
   if n =~ "\\."
@@ -117,12 +118,12 @@ transform2hs clk m = do
              	   then acc
              	   else acc ++ "\n\n" ++
              	        "data " ++ (hsName d) ++ " " ++ (type2hsList ts) ++ "=\n" ++
-                           foldl'
+                           (foldl'
                              (\acc (T.TCon (T.TCN d) ts) ->
                            	  acc ++ "  | " ++ (hsName d) ++ " " ++ (type2hsList ts) ++ "\n"
                              )
                              ("  " ++ (hsName fd) ++ " " ++ (type2hsList fts) ++ "\n")
-                             l
+                             l)  -- ++ "  deriving Show\n"
              )
              ""
              (M.types m) ++ "\n\n" ++
@@ -159,15 +160,17 @@ transform2hs clk m = do
         (_, ts) <- get
         let r1 = case (Set.toList ts) of
                   [] -> "\n\n"
-                  [t] -> "data SignalValue = T" ++ (type2hs t) ++ " " ++ (type2hs t) ++ "\n\n"
-                  (x:xs) -> "data SignalValue = \n  " ++ (foldl' (\acc t-> acc ++ "\n  | T" ++ (type2hs t) ++ " " ++ (type2hs t))
+                  [t] -> "data SignalValue = T" ++ (uniqTC t) ++ " " ++ (type2hs t) ++ "\n\n"
+                  (x:xs) -> "data SignalValue = \n  " ++ (foldl' (\acc t-> acc ++ "\n  | T" ++ (uniqTC t) ++ " " ++ (type2hs t))
                              (type2hs x) xs) ++ "\n\n"
             r2 = foldl' (\acc t -> acc ++ "\ninstance SignalClass " ++ (type2hs t) ++ " where\n"
-                          ++ "  getSignalValue (T" ++ (type2hs t) ++ " i) = i\n"
-                          ++ "  setSignalValue i = (T" ++ (type2hs t) ++ " i)\n") "" (Set.toList ts)
+                          ++ "  getSignalValue (T" ++ (uniqTC t) ++ " i) = i\n"
+                          ++ "  setSignalValue i = (T" ++ (uniqTC t) ++ " i)\n") "" (Set.toList ts)
          in return $ r ++ r1 ++ r2
 
---uniqTC t = MD5.md5s $ type2hs t
+uniqTC t = 
+  let s = show $ MD5.hash $ BSC.pack $ type2hs t
+   in replace '\\' "_" $ replace '\"' "" $ replace '&' "_" s
 
 defaultImports = unlines [
   "import Control.Parallel",

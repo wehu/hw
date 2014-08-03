@@ -57,7 +57,7 @@ executable hw
   other-extensions:    FlexibleInstances
   
   -- Other library packages from which modules are imported.
-  build-depends:       base >=4.5, containers >=0.4, parsec >=3.1, pretty >=1.1, mtl >=2.1, directory >=1.2, regex-posix >=0.95, indents >=0.3, process >= 1.0
+  build-depends:       base >=4.5, containers >=0.4, parsec >=3.1, pretty >=1.1, mtl >=2.1, directory >=1.2, regex-posix >=0.95, indents >=0.3, process >= 1.0, cryptohash >= 0.6.3, bytestring >= 0.9.2.1
   
   -- Directories containing source files.
   hs-source-dirs:      src
