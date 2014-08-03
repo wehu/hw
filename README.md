@@ -9,4 +9,4 @@ HW is a language for hardware simulation. It is still under development.
 	main = let i = liftS2 (\s1 s2 -> s1 + s2 + foo)
 	           <| (foldS (\acc a -> acc + 1) 1 clk)
 	           <| (liftS (\a -> 1) clk)
-	     in i
+	        in i
