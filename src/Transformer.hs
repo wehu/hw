@@ -104,8 +104,8 @@ transformMain m =
         (Left err, _) -> throwError err
       --return n
 
-transform2hs :: M.Module -> Transformer String
-transform2hs m = do
+transform2hs :: String -> M.Module -> Transformer String
+transform2hs clk m = do
   c <- transformMain m
   let r = "module " ++ (M.name m) ++ " where\n\n" ++
            defaultImports ++ "\n\n" ++
@@ -154,7 +154,7 @@ transform2hs m = do
            ++ "         main__ (i + 1)\n"
            ++ "  else return v\n"
            ++ "\n\n"
-           ++ builtIn ++ "\n\n"
+           ++ (builtIn clk) ++ "\n\n"
    in do
         (_, ts) <- get
         let r1 = case (Set.toList ts) of
@@ -176,7 +176,7 @@ defaultImports = unlines [
   "import qualified Data.Map as Map"
   ]
 
-builtIn = unlines [
+builtIn clk = unlines [
   "type Signal a = ErrorT String (StateT (Map.Map String SignalValue) IO) a",
   "type Clk = Int",
   "liftS :: (a -> b) -> Signal a -> Signal b",
@@ -206,7 +206,7 @@ builtIn = unlines [
   "int2Clk i = i",
   "main :: IO ()",
   "main = do",
-  "  res <- (runStateT $ runErrorT (main__ 0)) Map.empty",
+  "  res <- (runStateT $ runErrorT (main__ " ++ clk ++ ")) Map.empty",
   "  case res of",
   "    (Right d, _) -> putStrLn $ show d",
   "    (Left err, _) -> putStrLn err",

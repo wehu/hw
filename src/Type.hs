@@ -43,7 +43,8 @@ prScheme (Scheme vars t) = PP.text "forall" PP.<+> (PP.sep $ map (\v -> PP.text 
                           PP.<+> prType t
 
 translateFunType (TFun [] e) = e
-translateFunType (TFun (t:ts) e) = TFun [t] (translateFunType $ TFun ts e)
+translateFunType (TFun (t:ts) e) = TFun [translateFunType t] (translateFunType $ TFun ts (translateFunType e))
+translateFunType t = t
 
 
 nestedSignalType i (TCon a b) = nestedSignalTypeList (nestedSignalType i a) b

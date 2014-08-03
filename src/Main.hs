@@ -11,26 +11,31 @@ import System.Console.GetOpt
 import System.Process
 import System.Exit
 
-data Flag = Help | I String
+import Data.List
+
+data Flag = Help | I String | C String
         deriving Eq
 
 options = [ Option ['h'] ["help"] (NoArg Help) "Show help information",
-            Option ['i'] ["inc"] (ReqArg (\s -> I s) "PATH") "Specify search path"]
+            Option ['i'] ["inc"] (ReqArg (\s -> I s) "PATH") "Specify search path",
+            Option ['c'] ["clk"] (ReqArg (\s -> C s) "Clock") "Specify max clock"]
 
 parseArgs argv = case getOpt Permute options argv of
         (opts, files, [])
-                | (Help `elem` opts) || (files == []) -> ([], [])
-                | otherwise -> (map (\(I p) -> p) (filter (/=Help) opts), files)
-        (_, _, errs) -> (errs, [])
+                | (Help `elem` opts) || (files == []) -> ([], "0", [])
+                | otherwise -> (map (\(I p) -> p) (filter (/=Help) opts),
+                                (foldl' (\a o -> case o of (C c) -> c; _ -> a) "100" opts),
+                                files)
+        (_, _, errs) -> (errs, "0", [])
 
 banner = "Usage: hw [-h] [-i PATH] [file ...]"
 
-processFiles ps [] = return ()
-processFiles ps (f:files) = do
+processFiles ps clk [] = return ()
+processFiles ps clk (f:files) = do
         r <- R.importFile ps f
         case r of
             Right m  -> do
-                rr <- (runStateT $ runErrorT $ T.transform2hs m) T.nullSignalState
+                rr <- (runStateT $ runErrorT $ T.transform2hs clk m) T.nullSignalState
                 case rr of
                     (Right res, _) -> do
                         writeFile (f ++ ".hs") res
@@ -42,10 +47,10 @@ processFiles ps (f:files) = do
                                else putStrLn $ "run command `" ++ c ++ "\' failed"
                     (Left err, _) -> putStrLn err
             Left err -> putStrLn err
-        processFiles ps files
+        processFiles ps clk files
 
 main = do
     argv <- getArgs
     case parseArgs argv of
-        (ms, []) -> putStrLn $ unlines ms ++ usageInfo banner options
-        (ps, files) -> processFiles ps files
+        (ms, _, []) -> putStrLn $ unlines ms ++ usageInfo banner options
+        (ps, c, files) -> processFiles ps c files
