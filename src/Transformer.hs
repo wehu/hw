@@ -108,7 +108,8 @@ transformMain m =
 transform2hs :: String -> M.Module -> Transformer String
 transform2hs clk m = do
   c <- transformMain m
-  let r = "module " ++ (M.name m) ++ " where\n\n" ++
+  let r = "{-# LANGUAGE FlexibleInstances #-}\n" ++
+           "module " ++ (M.name m) ++ " where\n\n" ++
            defaultImports ++ "\n\n" ++
            Map.foldlWithKey
              (\acc n (h:h':l, _) ->
@@ -170,7 +171,7 @@ transform2hs clk m = do
 
 uniqTC t = 
   let s = show $ MD5.hash $ BSC.pack $ type2hs t
-   in replace ['\\', '\"', '&', '[', ']', '/'] "_" s
+   in replace ['\\', '\"', '&', '[', ']', '/', '^', '?', '<', '>', '.'] "_" s
 
 defaultImports = unlines [
   "import Control.Parallel",
