@@ -159,19 +159,21 @@ transform2hs clk m = do
            ++ builtIn ++ "\n\n"
    in do
         (_, ts) <- get
-        let r1 = case (Set.toList ts) of
-                  [] -> "\n\n"
-                  [t] -> "data SignalValue = T" ++ (uniqTC t) ++ " " ++ (type2hs t) ++ "\n\n"
-                  (x:xs) -> "data SignalValue = \n  " ++ (foldl' (\acc t-> acc ++ "\n  | T" ++ (uniqTC t) ++ " " ++ (type2hs t))
-                             ("T" ++ (uniqTC x) ++ " " ++ (type2hs x)) xs) ++ "\n\n"
-            r2 = foldl' (\acc t -> acc ++ "\ninstance SignalClass " ++ (type2hs t) ++ " where\n"
-                          ++ "  getSignalValue (T" ++ (uniqTC t) ++ " i) = i\n"
-                          ++ "  setSignalValue i = (T" ++ (uniqTC t) ++ " i)\n") "" (Set.toList ts)
-         in return $ r ++ r1 ++ r2
+        if (TI.ftv $ Set.toList ts) /= Set.empty
+        then throwError $ "`main' returns the type including type variables " ++ (show $ Set.toList ts)
+        else let r1 = case (Set.toList ts) of
+                       [] -> "\n\n"
+                       [t] -> "data SignalValue = T" ++ (uniqTC t) ++ " " ++ (type2hs t) ++ "\n\n"
+                       (x:xs) -> "data SignalValue = \n  " ++ (foldl' (\acc t-> acc ++ "\n  | T" ++ (uniqTC t) ++ " " ++ (type2hs t))
+                                  ("T" ++ (uniqTC x) ++ " " ++ (type2hs x)) xs) ++ "\n\n"
+                 r2 = foldl' (\acc t -> acc ++ "\ninstance SignalClass " ++ (type2hs t) ++ " where\n"
+                               ++ "  getSignalValue (T" ++ (uniqTC t) ++ " i) = i\n"
+                               ++ "  setSignalValue i = (T" ++ (uniqTC t) ++ " i)\n") "" (Set.toList ts)
+              in return $ r ++ r1 ++ r2
 
 uniqTC t = 
   let s = show $ MD5.hash $ BSC.pack $ type2hs t
-   in replace ['\\', '\"', '&', '[', ']', '/', '^', '?', '<', '>', '.'] "_" s
+   in replace ['\\', '\"', '&', '[', ']', '/', '^', '?', '<', '>', '.', '~', ':', '\''] "_" s
 
 defaultImports = unlines [
   "import Control.Parallel",

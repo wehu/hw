@@ -65,7 +65,7 @@ addType n t pos m     =
 	    nt = prefixTypeList pre t
 	in case Map.lookup nn (types m) of
 	   Nothing -> Right m{types   = Map.insert nn (nt, pos) (types m)}
-	   Just (ot, pos) -> if elem nn global_list
+	   Just (ot, pos) -> if elem nn global_list || ot == t
 	   	                 then Right m
 	   	                 else Left $ "data `" ++ nn ++ "\' already exists" 
 	                         ++ "\n    @ " ++ (show $ sourceName pos) ++ ":("
@@ -83,7 +83,7 @@ addSource n e m   =
 	in case Map.lookup nn (source m) of
 	   Nothing -> Right m{source  = Map.insert nn ne (source m)}
 	   Just oe -> let pos = A.exprPos oe
-	           in if elem nn global_list
+	           in if elem nn global_list || oe == e
 	           	  then Right m
 	           	  else Left $ "function `" ++ nn ++ "\' already exists"
 	                   ++ "\n    @ " ++ (show $ sourceName pos) ++ ":("
@@ -100,7 +100,7 @@ addEnv n s pos m      =
 	    ns = prefixScheme pre s
 	in case Map.lookup nn (env m) of
 	   Nothing -> Right m{env     = Map.insert nn (ns, pos) (env m)}
-	   Just (os, pos) -> if elem nn global_list
+	   Just (os, pos) -> if elem nn global_list || os == s
 	   	                 then Right m
 	   	                 else Left $ "type `" ++ nn ++ "\' already exists"
 	                             ++ "\n    @ " ++ (show $ sourceName pos) ++ ":("

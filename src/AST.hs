@@ -58,6 +58,7 @@ prExp (ELit (LStr s) _) = PP.text s
 prExp (ECon (CCon n es) _) = PP.parens $ PP.text n PP.<+> prExpList es
 prExp (EApp f [a] _) = PP.parens $ prExp f PP.<+> prExp a
 prExp e@(EApp _ _ _) = prExp $ translateApp e
+prExp (EAbs [] e _) = prExp e
 prExp (EAbs ps e _) = PP.parens $ PP.text "\\" PP.<+> prExpList ps
                       PP.<+> PP.text "->" PP.<+> prExp e
 prExp (EFun n ps e _) = PP.text n PP.<+> prExpList ps PP.<+> PP.text "=" PP.<+> prExp e

@@ -18,7 +18,7 @@ data Type = TVar String
           | TFun [Type] Type
           deriving (Eq, Ord)
 
-data Scheme = Scheme [String] Type
+data Scheme = Scheme [String] Type deriving (Eq, Ord)
 
 instance Show (Type) where
   showsPrec _ x = shows $ prType x
@@ -29,8 +29,10 @@ prType TBool    = PP.text "Bool"
 prType TFloat   = PP.text "Float"
 prType TDouble  = PP.text "Double"
 prType TStr     = PP.text "String"
+prType (TCon a []) = PP.parens $ prType a
 prType (TCon a b) = PP.parens $ prType a PP.<+> prTypeList b
 prType (TCN a)  = PP.text a
+prType (TFun [] a) = PP.parens $ prType a
 prType (TFun a b) = PP.parens $ prTypeList a PP.<+> PP.text "->" PP.<+> prType b
 
 prTypeList []       = PP.text ""

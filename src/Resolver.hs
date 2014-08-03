@@ -21,61 +21,61 @@ nullModules = Map.empty
 
 type Resolver a = ErrorT String (StateT Modules IO) a
 
-importModule ps m n pre = do
-	ms <- get
-	case Map.lookup n ms of
-		Nothing -> do
-			r <- liftIO $ importFile ps n
-			case r of
-				Right nm -> do
-					put $ Map.insert n nm ms
-					importModule ps m n pre
-				Left err -> throwError err
-		Just nm -> do
-		  m <- Map.foldlWithKey
-		    (\acc k (v, pos) -> do
-		        m <- acc
-		        case M.addType k v pos m of
-		        	Right m -> return m
-		        	Left err -> throwError $ err ++ "\nwhen try to import " ++ n
-		                                     ++ "\n    @ " ++ (show $ sourceName pos) ++ ":("
-		                                     ++ (show $ sourceLine pos) ++ "," ++ (show $ sourceColumn pos) ++ ")\n"
-		    )
-		    (return m)
-		    (M.types nm)
-		  m <- Map.foldlWithKey
-		    (\acc k v -> do
-		        m <- acc
-		        case M.addSource k v m of
-		        	Right m -> return m
-		        	Left err -> throwError $ err ++ "\nwhen try to import " ++ n
-		                                     ++ "\n    @ " ++ (show $ sourceName (A.exprPos v)) ++ ":("
-		                                     ++ (show $ sourceLine (A.exprPos v)) ++ ","
-		                                     ++ (show $ sourceColumn (A.exprPos v)) ++ ")\n"
-		    )
-		    (return m)
-		    (M.source nm)
-		  m <- Map.foldlWithKey
-		    (\acc k (v, pos) -> do
-		        m <- acc
-		        case M.addEnv k v pos m of
-		        	Right m -> return m
-		        	Left err -> throwError $ err ++ "\nwhen try to import " ++ n
-		                                     ++ "\n    @ " ++ (show $ sourceName pos) ++ ":("
-		                                     ++ (show $ sourceLine pos) ++ "," ++ (show $ sourceColumn pos) ++ ")\n"
-		    )
-		    (return m)
-		    (M.env nm)
-		  return m
+importModule ps m n pre fs = do
+  ms <- get
+  case Map.lookup n ms of
+    Nothing -> do
+                 r <- liftIO $ importFile ps n fs
+                 case r of
+                   Right nm -> do
+                     put $ Map.insert n nm ms
+                     importModule ps m n pre fs
+                   Left err -> throwError err
+    Just nm -> do
+      m <- Map.foldlWithKey
+        (\acc k (v, pos) -> do
+            m <- acc
+            case M.addType k v pos m of
+              Right m -> return m
+              Left err -> throwError $ err ++ "\nwhen try to import " ++ n
+                                         ++ "\n    @ " ++ (show $ sourceName pos) ++ ":("
+                                         ++ (show $ sourceLine pos) ++ "," ++ (show $ sourceColumn pos) ++ ")\n"
+        )
+        (return m)
+        (M.types nm)
+      m <- Map.foldlWithKey
+        (\acc k v -> do
+            m <- acc
+            case M.addSource k v m of
+              Right m -> return m
+              Left err -> throwError $ err ++ "\nwhen try to import " ++ n
+                                         ++ "\n    @ " ++ (show $ sourceName (A.exprPos v)) ++ ":("
+                                         ++ (show $ sourceLine (A.exprPos v)) ++ ","
+                                         ++ (show $ sourceColumn (A.exprPos v)) ++ ")\n"
+        )
+        (return m)
+        (M.source nm)
+      m <- Map.foldlWithKey
+        (\acc k (v, pos) -> do
+            m <- acc
+            case M.addEnv k v pos m of
+              Right m -> return m
+              Left err -> throwError $ err ++ "\nwhen try to import " ++ n
+                                         ++ "\n    @ " ++ (show $ sourceName pos) ++ ":("
+                                         ++ (show $ sourceLine pos) ++ "," ++ (show $ sourceColumn pos) ++ ")\n"
+        )
+        (return m)
+        (M.env nm)
+      return m
 
-importModules ps m =
-	Map.foldlWithKey
-	   (\acc n (pre, pos) -> do
-	   	  m <- acc
-	   	  importModule ps m n pre
-	   )
-	   (return m)
-	   (M.imports m)
+importModules ps m fs =
+  Map.foldlWithKey
+     (\acc n (pre, pos) -> do
+         m <- acc
+         importModule ps m n pre fs
+     )
+     (return m)
+     (M.imports m)
 
 initEnvForResolver m = TI.typeState 0
                           (TI.TypeEnv $ Map.map (\(s, _)->s) $ M.env m)
@@ -128,7 +128,7 @@ resolveModuleTypes m = do
     (Map.elems (M.env m))
 
 
-importFile ps file = do
+importFile ps file fs = do
   fn <- foldM
           (\acc p ->
             foldM
@@ -144,14 +144,17 @@ importFile ps file = do
           ""
           ps
   contents <- readFile (if fn == "" then file else fn)
-  case P.iParse file contents of
+  case P.iParse fn contents of
     Left err -> return $ Left $ show err
     Right m -> do
-      (r, _) <- runStateT (runErrorT (do
-              m <- importModules ps $ M.addInitEnv m
-              m <- resolveModuleTypes m
-              resolveModuleSource m)) nullModules
+      (r, _) <- runStateT (runErrorT (
+              case Map.lookup fn fs of
+                Nothing -> do
+                             m <- importModules ps (M.addInitEnv m) (Map.insert fn True fs)
+                             m <- resolveModuleTypes m
+                             resolveModuleSource m
+                Just True -> throwError $ "circle importing " ++ file)) nullModules
       case r of
-      	Right m -> return $ Right m
-      	Left err -> return $ Left err
+        Right m -> return $ Right m
+        Left err -> return $ Left err
 

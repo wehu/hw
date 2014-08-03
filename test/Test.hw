@@ -30,11 +30,11 @@ ooo = BBB
 f a = a
 
 main :: Signal Int
-main = liftS2 (\s1 s2 -> 1.0) <| pp <| oo
+main = liftS2 (\(NN s1) s2 -> (s1 0) + s2) <| pp <| oo
 
-oo = foldS (\a i -> a) 0.0 clk
+oo = foldS (\a i -> a) 0 clk
 
-pp = foldS (\a i -> a) (BB 0) clk
+pp = foldS (\a i -> a) (NN (\f -> 1 + f)) clk
 
 ll = not True || False
 

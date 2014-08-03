@@ -12,6 +12,7 @@ import System.Process
 import System.Exit
 
 import Data.List
+import qualified Data.Map as Map
 
 data Flag = Help | I String | C String
         deriving Eq
@@ -32,7 +33,7 @@ banner = "Usage: hw [-h] [-i PATH] [file ...]"
 
 processFiles ps clk [] = return ()
 processFiles ps clk (f:files) = do
-        r <- R.importFile ps f
+        r <- R.importFile ps f Map.empty
         case r of
             Right m  -> do
                 rr <- (runStateT $ runErrorT $ T.transform2hs clk m) T.nullSignalState
