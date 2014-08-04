@@ -30,7 +30,7 @@ import Control.Monad.Error
 import Control.Monad.State
 import Text.Parsec.Pos (sourceName, sourceLine, sourceColumn)
 import System.Directory
-import Control.Exception
+import Control.Exception as CE
 import System.Exit
 
 type Modules = Map.Map String M.Module
@@ -161,7 +161,7 @@ importFile_ ps file fs pos poses = do
           )
           ""
           ps
-  contents <- catch (readFile (if fn == "" then file else fn))
+  contents <- CE.catch (readFile (if fn == "" then file else fn))
                     (\e ->
                        let err = show (e :: IOException) ++ "\n" ++
                                   "import " ++ file ++ " failed\n" ++
