@@ -13,10 +13,18 @@ name:                hw
 version:             0.1.0.0
 
 -- A short (one-line) description of the package.
--- synopsis:            
+synopsis:            HW is a language for hardware simulation
 
 -- A longer description of the package.
--- description:         
+description:     
+                     Example
+                     
+                       foo = 1 |> (\a -> (3 + a))
+                     
+                       main = let i = liftS2 (\s1 s2 -> s1 + s2 + foo)
+                                  <| (foldS (\acc a -> acc + 1) 1 clk)
+                                  <| (liftS (\a -> 1) clk)
+                               in i    
 
 -- The license under which the package is released.
 license:             Apache-2.0
