@@ -14,6 +14,8 @@
    limitations under the License.
 -}
 
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
 
 import qualified Transformer as T
@@ -27,6 +29,9 @@ import System.Console.GetOpt
 import System.Process
 import System.Exit
 
+import Utils
+import Text.Regex.Posix
+
 import Data.List
 import qualified Data.Map as Map
 
@@ -37,10 +42,13 @@ options = [ Option ['h'] ["help"] (NoArg Help) "Show help information",
             Option ['i'] ["inc"] (ReqArg (\s -> I s) "PATH") "Specify search path",
             Option ['c'] ["clk"] (ReqArg (\s -> C s) "Clock") "Specify max clock"]
 
+libPath = let [[fn, p, n]] = ($(currentFile) =~ "(.*)[\\/](.*)" :: [[String]])
+            in p ++ "/../lib"
+
 parseArgs argv = case getOpt Permute options argv of
         (opts, files, [])
                 | (Help `elem` opts) || (files == []) -> ([], "0", [])
-                | otherwise -> (map (\(I p) -> p) (filter (/=Help) opts),
+                | otherwise -> ((foldl' (\a o -> case o of (I c) -> c:a; _ -> a) [libPath] opts),
                                 (foldl' (\a o -> case o of (C c) -> c; _ -> a) "0" opts),
                                 files)
         (_, _, errs) -> (errs, "0", [])
