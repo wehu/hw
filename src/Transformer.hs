@@ -115,7 +115,7 @@ transformMain m =
   case subStMain m of
     Nothing -> throwError "cannot find function main"
     Just e -> do
-      res <- liftIO $ (runStateT $ runErrorT $ TI.ti TI.nullEnv e) $ R.initEnvForResolver m
+      res <- liftIO $ (runStateT $ runErrorT $ TI.ti TI.nullTypeInferEnv e) $ R.initResolverEnv m
       case res of
         (Right (_, _, n), _) -> node2hs n
         (Left err, _) -> throwError err
@@ -125,7 +125,7 @@ transform2hs :: String -> M.Module -> Transformer String
 transform2hs clk m = do
   c <- transformMain m
   let r = "{-# LANGUAGE FlexibleInstances #-}\n" ++
-           "module " ++ (M.name m) ++ " where\n\n" ++
+           "module Main where\n\n" ++
            defaultImports ++ "\n\n" ++
            Map.foldlWithKey
              (\acc n (h:h':l, _) ->

@@ -30,7 +30,7 @@ ooo = BBB
 f a = a
 
 main :: Signal Int
-main = liftS2 (\(NN s1) s2 -> (s1 0) + BBB) <| pp <| oo
+main = liftS2 (\(NN s1) s2 -> (s1 0) + 0) <| pp <| oo
 
 oo = foldS (\a i -> a) 0 clk
 

@@ -15,7 +15,7 @@
 -}
 
 module Resolver(
-  initEnvForResolver,
+  initResolverEnv,
   importFile
 ) where
 
@@ -30,6 +30,8 @@ import Control.Monad.Error
 import Control.Monad.State
 import Text.Parsec.Pos (sourceName, sourceLine, sourceColumn)
 import System.Directory
+import Control.Exception
+import System.Exit
 
 type Modules = Map.Map String M.Module
 
@@ -37,15 +39,15 @@ nullModules = Map.empty
 
 type Resolver a = ErrorT String (StateT Modules IO) a
 
-importModule ps m n pre fs = do
+importModule ps m n pre fs pos poses = do
   ms <- get
   case Map.lookup n ms of
     Nothing -> do
-                 r <- liftIO $ importFile ps n fs
+                 r <- liftIO $ importFile_ ps n fs pos poses
                  case r of
                    Right nm -> do
                      put $ Map.insert n nm ms
-                     importModule ps m n pre fs
+                     importModule ps m n pre fs pos poses
                    Left err -> throwError err
     Just nm -> do
       m <- Map.foldlWithKey
@@ -84,26 +86,26 @@ importModule ps m n pre fs = do
         (M.env nm)
       return m
 
-importModules ps m fs =
+importModules ps m fs poses =
   Map.foldlWithKey
      (\acc n (pre, pos) -> do
          m <- acc
-         importModule ps m n pre fs
+         importModule ps m n pre fs pos poses
      )
      (return m)
      (M.imports m)
 
-initEnvForResolver m = TI.typeState 0
+initResolverEnv m = TI.typeInferState 0
                           (TI.TypeEnv $ Map.map (\(s, _)->s) $ M.env m)
                           (M.source m)
-                          TI.nullResolved
+                          TI.nullInferred
 
 resolveModuleSource m =
   Map.foldlWithKey
    (\acc n e ->
     do
       m <- acc
-      res <- liftIO $ TI.runResolve n $ initEnvForResolver m
+      res <- liftIO $ TI.runTI n $ initResolverEnv m
       case res of
         (Right s, _) -> do
           return $ M.addEnv_ n s (A.exprPos e) m
@@ -122,7 +124,7 @@ resolveType ts (T.TCN a) pos =
                          ++ "\n    @ " ++ (show $ sourceName pos)
                          ++ ":(" ++ (show $ sourceLine pos)
                          ++ "," ++ (show $ sourceColumn pos)
-                         ++ ")" ++ "\n"
+                         ++ ")\n"
     Just t -> return ()
 resolveType ts (T.TFun a b) pos = do
   resolveTypeList ts a pos
@@ -144,7 +146,7 @@ resolveModuleTypes m = do
     (Map.elems (M.env m))
 
 
-importFile ps file fs = do
+importFile_ ps file fs pos poses = do
   fn <- foldM
           (\acc p ->
             foldM
@@ -159,18 +161,34 @@ importFile ps file fs = do
           )
           ""
           ps
-  contents <- readFile (if fn == "" then file else fn)
+  contents <- catch (readFile (if fn == "" then file else fn))
+                    (\e ->
+                       let err = show (e :: IOException) ++ "\n" ++
+                                  "import " ++ file ++ " failed\n" ++
+                                  foldl' (\acc (f, pos) -> acc ++ "  from " 
+                                          ++ f ++ ":(" ++ (show $ sourceLine pos)
+                                          ++ "," ++ (show $ sourceColumn pos) ++")\n")
+                                         ""
+                                         (zip fs poses)
+                       in do putStrLn err
+                             exitFailure)
   case P.iParse fn contents of
     Left err -> return $ Left $ show err
     Right m -> do
       (r, _) <- runStateT (runErrorT (
-              case Map.lookup fn fs of
-                Nothing -> do
-                             m <- importModules ps (M.addInitEnv m) (Map.insert fn True fs)
-                             m <- resolveModuleTypes m
-                             resolveModuleSource m
-                Just True -> throwError $ "circle importing " ++ file)) nullModules
+              if elem fn fs
+              then throwError $ "circle importing `" ++ file ++ "\'\n" ++
+                                foldl' (\acc (f, pos) -> acc ++ "  from " 
+                                        ++ f ++ ":(" ++ (show $ sourceLine pos)
+                                        ++ "," ++ (show $ sourceColumn pos) ++")\n")
+                                       ""
+                                       (zip fs poses)
+              else do
+                     m <- importModules ps (M.addInitEnv m) (fn:fs) (pos:poses)
+                     m <- resolveModuleTypes m
+                     resolveModuleSource m)) nullModules
       case r of
         Right m -> return $ Right m
         Left err -> return $ Left err
 
+importFile ps file = importFile_ ps file [] M.sysSourcePos []

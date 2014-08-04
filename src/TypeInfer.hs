@@ -22,10 +22,10 @@ module TypeInfer(
   Node(..),
   ftvPat,
   ti,
-  typeState,
-  nullResolved,
-  runResolve,
-  nullEnv
+  typeInferState,
+  nullInferred,
+  runTI,
+  nullTypeInferEnv
 ) where
 
 import qualified Data.Map as Map
@@ -90,7 +90,7 @@ instance Types T.Scheme where
 
 newtype TypeEnv = TypeEnv (Map.Map String T.Scheme)
 
-nullEnv = TypeEnv Map.empty
+nullTypeInferEnv = TypeEnv Map.empty
 
 instance Types TypeEnv where
   ftv (TypeEnv env) = ftv $ Map.elems env
@@ -115,16 +115,16 @@ generalizeL env tl =
     (return env)
     tl
 
-type Resolved = Map.Map String Bool
+type Inferred = Map.Map String Bool
 
-nullResolved = Map.empty
+nullInferred = Map.empty
 
-data TypeState = TypeState {varc :: Int, globalEnv :: TypeEnv, source :: M.Source, resolved :: Resolved}
+data TypeInferState = TypeInferState {varc :: Int, globalEnv :: TypeEnv, source :: M.Source, inferred :: Inferred}
 
-typeState c e s r = TypeState {varc = c, globalEnv = e, source = s, resolved = r}
-initTypeState = typeState 0 nullEnv Map.empty Map.empty
+typeInferState c e s i = TypeInferState {varc = c, globalEnv = e, source = s, inferred = i}
+initTypeInferState = typeInferState 0 nullTypeInferEnv Map.empty Map.empty
 
-type TI a = ErrorT String (StateT TypeState IO) a
+type TI a = ErrorT String (StateT TypeInferState IO) a
 
 newTVar :: String -> TI T.Type
 newTVar prefix = do
@@ -153,15 +153,15 @@ removeSource n = do
   s <- get
   put s{source = Map.delete n (source s)}
 
-getResolved :: TI (Resolved)
-getResolved = do
+getInferred :: TI (Inferred)
+getInferred = do
   s <- get
-  return $ resolved s
+  return $ inferred s
 
-setResolved :: String -> TI ()
-setResolved n = do
+setInferred :: String -> TI ()
+setInferred n = do
   s <- get
-  put s{resolved = Map.insert n True (resolved s)}
+  put s{inferred = Map.insert n True (inferred s)}
 
 instantiate (T.Scheme vars t) = do
   nvars <- mapM (\_-> newTVar "a") vars
@@ -173,7 +173,7 @@ typeMismatch e t1 t2 = throwError $
                          ++ "\'\n    @ " ++ (show $ sourceName $ A.exprPos e)
                          ++ ":(" ++ (show $ sourceLine $ A.exprPos e)
                          ++ "," ++ (show $ sourceColumn $ A.exprPos e)
-                         ++ ")" ++ "\n\n" ++ (show e) ++ "\n"
+                         ++ ")" ++ "\n\n  in " ++ (show e) ++ "\n"
 
 unify :: A.Exp -> T.Type -> T.Type -> TI SubSt
 unify e (T.TFun [] r) t = unify e r t
@@ -181,12 +181,11 @@ unify e t (T.TFun [] r) = unify e t r
 unify e (T.TFun l r) (T.TFun l' r') = do
   if length l /= length l'
   then typeMismatch e l l'
-  else do s1 <- foldl'
-                  (\acc (a, a') ->
-                     do s <- acc
-                        s' <- unify e (subSt s a) (subSt s a')
+  else do s1 <- foldM
+                  (\s (a, a') ->
+                     do s' <- unify e (subSt s a) (subSt s a')
                         return $ s `combineSubSt` s')
-                  (return nullSubSt)
+                  nullSubSt
                   (zip l l')
           s2 <- unify e (subSt s1 r) (subSt s1 r')
           return $ combineSubSt s1 s2
@@ -235,7 +234,7 @@ checkNestSignalType e t =
                     ++ "\'\n    @ " ++ (show $ sourceName $ A.exprPos e)
                     ++ ":(" ++ (show $ sourceLine $ A.exprPos e)
                     ++ "," ++ (show $ sourceColumn $ A.exprPos e)
-                     ++ ")" ++ "\n\n" ++ (show e) ++ "\n"
+                     ++ ")" ++ "\n\n  in " ++ (show e) ++ "\n"
   else return t
 
 genPat (TypeEnv env) pat =
@@ -255,7 +254,7 @@ genPat (TypeEnv env) pat =
                             (return (env'', nullSubSt))
                             vs
          (s'', t, n) <- ti (subSt s' (TypeEnv env')) pat
-         return (subSt s'' $ TypeEnv env', subSt s'' t, n)
+         return (subSt s'' $ TypeEnv env', subSt s'' t, subSt s'' n)
 
 data Node =
   NN A.Exp T.Type Node
@@ -282,7 +281,7 @@ ti (TypeEnv env) e@(A.EVar a _) = do
       do (TypeEnv ge) <- getGlobalEnv
          case Map.lookup a ge of
            Nothing -> do
-             (T.Scheme _ t) <- resolve a
+             (T.Scheme _ t) <- typeInfer a
              checkNestSignalType e t
              return (nullSubSt, t, NN e t nullNB)
            Just s -> do
@@ -300,24 +299,24 @@ ti _ e@(A.ELit (A.LFloat _) _) = return (nullSubSt, T.TFloat, NN e T.TFloat null
 ti _ e@(A.ELit (A.LDouble _) _) = return (nullSubSt, T.TDouble, NN e T.TDouble nullNB)
 ti env e@(A.ECon (A.CCon "[]" []) _) = do
   t <- newTVar "a"
-  let nt = T.TCon (T.TCN "[]") [t]
+  let t' = T.TCon (T.TCN "[]") [t]
    in (do
-        checkNestSignalType e nt
-        return (nullSubSt, nt, NN e nt nullNB))
-ti env e@(A.ECon (A.CCon "[]" cs@(h:ps)) _) = do
+        checkNestSignalType e t'
+        return (nullSubSt, t', NN e t' nullNB))
+ti env e@(A.ECon (A.CCon "[]" cs@(x:xs)) _) = do
   (s, t, n) <- foldl'
               (\acc p ->
                  do (s1, t1, n1) <- acc
                     (s2, t2, n2) <- ti (subSt s1 env) p
                     s3 <- unify e (subSt s2 t1) (subSt s2 t2)
-                    return (s1 `combineSubSt` s2 `combineSubSt` s3, subSt s3 t2, mergeNode (subSt s3 n1) (subSt s3 n2))
+                    return (s1 `combineSubSt` s2 `combineSubSt` s3, subSt s3 t2, subSt s3 $ mergeNode n1 n2)
               )
-              (ti env h)
-              ps
-  let nt = subSt s $ T.TCon (T.TCN "[]") [t]
+              (ti env x)
+              xs
+  let t' = subSt s $ T.TCon (T.TCN "[]") [t]
    in do
-        checkNestSignalType e nt
-        return (s, nt, subSt s $ NN e nt n)
+        checkNestSignalType e t'
+        return (s, t', subSt s $ NN e t' n)
 ti env e@(A.ECon (A.CCon c []) pos) =
   if c == "()"
   then
@@ -330,9 +329,9 @@ ti env e@(A.ECon (A.CCon c ps) pos) =
   then do
     (s, ts, n) <- foldl'
       (\acc e-> do
-        (s, ot, n1) <- acc
-        (s1, t, n2) <- ti (subSt s env) e
-        return (s1, subSt s1 $ ot ++ [t], mergeNode (subSt s1 n1) (subSt s1 n2))
+        (s1, t1, n1) <- acc
+        (s2, t2, n2) <- ti (subSt s1 env) e
+        return (s1 `combineSubSt` s2, subSt s2 $ t1 ++ [t2], subSt s2 $ mergeNode n1 n2)
       )
       (return (nullSubSt, [], nullNB))
       ps
@@ -351,35 +350,35 @@ ti env e@(A.EApp a [] _) =
 ti env e@(A.EApp a ps _) =
   do nt <- newTVar "a"
      (sa, ta, na) <- ti env a
-     (sp, tp, np) <- let (h:tl) = ps
-                         th = (ti (subSt sa env) h) >>= (\(s, t, n) -> return (s, subSt s [t], n))
+     (sp, tp, np) <- let (x:xs) = ps
+                         h = (ti (subSt sa env) x) >>= (\(s, t, n) -> return (s, subSt s [t], n))
                       in foldl'
                            (\acc e ->
-                              do (s1, ts, n1) <- acc
-                                 (s2, t, n2) <- ti (subSt s1 env) e
-                                 return (s1 `combineSubSt` s2, subSt s2 $ ts ++ [t], subSt s2 $ mergeNode n1 n2))
-                           th
-                           tl
+                              do (s1, t1, n1) <- acc
+                                 (s2, t2, n2) <- ti (subSt s1 env) e
+                                 return (s1 `combineSubSt` s2, subSt s2 $ t1 ++ [t2], subSt s2 $ mergeNode n1 n2))
+                           h
+                           xs
      s <- unify e ta (T.translateFunType $ T.TFun tp nt)
      let nt' = subSt s nt
       in do checkNestSignalType e nt'
             return (s `combineSubSt` sp `combineSubSt` sa, nt', subSt s $ NN e nt' (mergeNode na np))
 ti env ae@(A.EAbs cs e pos) =
-  do (env1, ts, n1) <- let (h:tl) = cs
-                           th = (do
-                                   (env', t, n) <- genPat env h
+  do (env1, t1, n1) <- let (x:xs) = cs
+                           h = (do
+                                   (env', t, n) <- genPat env x
                                    return (env', [t], n))
                      in foldl'
                           (\acc e ->
-                             do (TypeEnv env1, ts, n1) <- acc
-                                (TypeEnv env2, t, n2) <- genPat (TypeEnv env1) e
-                                return (TypeEnv $ env2 `Map.union` env1, ts ++ [t], mergeNode n1 n2))
-                          th
-                          tl
-     (s, t, n2) <- ti env1 e
-     let nt = subSt s $ T.translateFunType $ T.TFun ts t
-      in do checkNestSignalType ae nt
-            return (s, nt, subSt s $ NN ae nt n2)
+                             do (TypeEnv env1, t1, n1) <- acc
+                                (TypeEnv env2, t2, n2) <- genPat (TypeEnv env1) e
+                                return (TypeEnv $ env2 `Map.union` env1, t1 ++ [t2], mergeNode n1 n2))
+                          h
+                          xs
+     (s, t2, n2) <- ti env1 e
+     let t = subSt s $ T.translateFunType $ T.TFun t1 t2
+      in do checkNestSignalType ae t
+            return (s, t, subSt s $ NN ae t n2)
 ti env fe@(A.EFun n [] e pos) =
   do (s, t, nn) <- ti env e
      (let ft = subSt s t
@@ -388,19 +387,19 @@ ti env fe@(A.EFun n [] e pos) =
              checkNestSignalType fe ft
              return (s, ft, subSt s $ NN fe ft nn)))
 ti env fe@(A.EFun n cs e pos) =
-  do (env1, ts, n1) <- let (h:tl) = cs
-                           th = (do
-                                   (env', t, n) <- genPat env h
+  do (env1, t1, n1) <- let (x:xs) = cs
+                           h = (do
+                                   (env', t, n) <- genPat env x
                                    return (env', [t], n))
                      in foldl'
                           (\acc e ->
-                             do (TypeEnv env1, ts, n1) <- acc
-                                (TypeEnv env2, t, n2) <- genPat (TypeEnv env1) e
-                                return (TypeEnv $ env2 `Map.union` env1, ts ++ [t], mergeNode n1 n2))
-                          th
-                          tl
-     (s, t, n2) <- ti env1 e
-     (let ft = subSt s $ T.translateFunType $ T.TFun ts t
+                             do (TypeEnv env1, t1, n1) <- acc
+                                (TypeEnv env2, t2, n2) <- genPat (TypeEnv env1) e
+                                return (TypeEnv $ env2 `Map.union` env1, t1 ++ [t2], mergeNode n1 n2))
+                          h
+                          xs
+     (s, t2, n2) <- ti env1 e
+     (let ft = subSt s $ T.translateFunType $ T.TFun t1 t2
       in (do --ns <- generalize (remove env n) ft
              --addGlobalEnv n ns
              checkNestSignalType fe ft
@@ -412,7 +411,7 @@ ti env le@(A.ELet ps e pos) =
                                       (s2, t2, n2) <- ti env e
                                       s3 <- unify le (subSt s2 t1) (subSt s2 t2)
                                       env2 <- generalizeL (subSt s3 env1) (Set.toList (ftvPat c))
-                                      return (env2, s2 `combineSubSt` s3, subSt s3 t2, subSt s3 n2))
+                                      return (env2, s2 `combineSubSt` s3, subSt s3 t2, subSt s3 $ mergeNode n1 n2))
                            in foldl'
                                 (\acc (c, e) ->
                                    do (TypeEnv env1, s1, t1, n1) <- acc
@@ -420,7 +419,8 @@ ti env le@(A.ELet ps e pos) =
                                       (s3, t3, n3) <- ti (subSt s1 (TypeEnv env1)) e
                                       s4 <- unify le (subSt s3 t2) (subSt s3 t3)
                                       env3 <- generalizeL (subSt s4 (TypeEnv env2)) (Set.toList (ftvPat c))
-                                      return (TypeEnv $ env2 `Map.union` env1,  s1 `combineSubSt` s3 `combineSubSt` s4, subSt s4 t3, subSt s4 $ mergeNode n1 n3)
+                                      return (TypeEnv $ env2 `Map.union` env1,  s1 `combineSubSt` s3 `combineSubSt` s4,
+                                         subSt s4 t3, subSt s4 $ mergeNode n1 $ mergeNode n2 n3)
                                 )
                                 th
                                 tl
@@ -446,7 +446,7 @@ ti env ce@(A.ECase e ps pos) =
                                 (env2, t2, n1) <- genPat env c
                                 s3 <- unify ce t1 t2
                                 (s4, t4, n2) <- ti (subSt (s1 `combineSubSt` s3) env2) e
-                                return (s3 `combineSubSt` s4, subSt s4 t4, subSt s4 n2))
+                                return (s3 `combineSubSt` s4, subSt s4 t4, subSt s4 $ mergeNode n1 n2))
                      in foldl'
                           (\acc (c, e) ->
                              do
@@ -455,7 +455,7 @@ ti env ce@(A.ECase e ps pos) =
                                s4 <- unify ce t1 t3
                                (s5, t5, n3) <- ti (subSt (s1 `combineSubSt` s2 `combineSubSt` s4) env3) e
                                s6 <- unify ce (subSt s5 t2) (subSt s5 t5)
-                               return (s4 `combineSubSt` s5 `combineSubSt` s6, subSt s6 t5, subSt s6 $ mergeNode n1 n3)
+                               return (s4 `combineSubSt` s5 `combineSubSt` s6, subSt s6 t5, subSt s6 $ mergeNode n1 $ mergeNode n2 n3)
                           )
                           th
                           tl
@@ -463,8 +463,8 @@ ti env ce@(A.ECase e ps pos) =
       in do checkNestSignalType ce t
             return (s1 `combineSubSt` s2, t, subSt s2 $ NN ce t (mergeNode n1 n2))
 
-resolve n = do
-  r <- getResolved
+typeInfer n = do
+  r <- getInferred
   case Map.lookup n r of
     Nothing -> do
       s <- getSource
@@ -473,13 +473,13 @@ resolve n = do
         Just e ->
           do
             --removeSource n
-            setResolved n
-            (s, t, _) <- ti nullEnv e
+            setInferred n
+            (s, t, _) <- ti nullTypeInferEnv e
             checkNestSignalType e t
             (TypeEnv ge) <- getGlobalEnv
             case Map.lookup n ge of
               Nothing ->
-                do st <- generalize nullEnv t
+                do st <- generalize nullTypeInferEnv t
                    addGlobalEnv n st
                    return st
               Just (T.Scheme var tc) -> do
@@ -488,13 +488,12 @@ resolve n = do
                  in (if nt /= tc && n /= "main"
                      then typeMismatch e nt tc
                      else do
-                            st <- generalize nullEnv nt
+                            st <- generalize nullTypeInferEnv nt
                             addGlobalEnv n st
                             return st))
     Just True -> do
       t <- newTVar "a"
-      st <- generalize nullEnv t
+      st <- generalize nullTypeInferEnv t
       return st
 
---runTi env e s = (runStateT $ runErrorT $ ti env e) s
-runResolve n env = (runStateT $ runErrorT $ resolve n) env
+runTI n env = (runStateT $ runErrorT $ typeInfer n) env

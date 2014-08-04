@@ -49,11 +49,11 @@ banner = "Usage: hw [-h] [-i PATH] [file ...]"
 
 processFiles ps clk [] = return ()
 processFiles ps clk (f:files) = do
-        r <- R.importFile ps f Map.empty
+        r <- R.importFile ps f
         case r of
             Right m  -> do
-                rr <- (runStateT $ runErrorT $ T.transform2hs clk m) T.nullSignalState
-                case rr of
+                r' <- (runStateT $ runErrorT $ T.transform2hs clk m) T.nullSignalState
+                case r' of
                     (Right res, _) -> do
                         writeFile (f ++ ".hs") res
                         let c = "runghc " ++ f ++ ".hs"

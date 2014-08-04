@@ -123,7 +123,7 @@ modDef = do
   --endLine
   m <- getState
   setState $ foldl' (\acc (pos, n) -> M.addExport n pos acc) (M.setName b m) c
-  (try (modImport <?> "import") <|> return [()])
+  (try (modImport <?> "import declare") <|> return [()])
   checkIndent
   modBody <?> "module body"
   getState
@@ -144,9 +144,9 @@ modImport = do
 
 modBody = do
   block $ do
-    (dataDecl <?> "data")
-    <|> ((try funcType) <?> "declare function type")
-    <|> (funcDecl <?> "define function")
+    dataDecl
+    <|> (try funcType)
+    <|> funcDecl
 
 dataDecl = do
   pos <- getPosition
@@ -180,12 +180,12 @@ dataConstruct = do
   <|> try (do
       pos <- getPosition
       withPos $ let f a b = (a, b, pos)
-        in return f <+/> capIdent <*/> typeDecl)
+        in return f <+/> capIdent <*/> typeDecl) <?> "data constructor declare"
 
 dataAlter = do
   try (do
       withPos $ let f a _ b = a:b
-        in return f <+/> dataConstruct <+/> reservedOp "|" <+/> dataAlter)
+        in return f <+/> dataConstruct <+/> reservedOp "|" <+/> dataAlter) <?> "alternative data declare"
   <|> (do
       (\a -> [a]) <$> dataConstruct)
 
@@ -202,20 +202,21 @@ simpleTypeDecl = do
                                _ -> if (length b == 0)
                                     then T.TCN a
                                     else T.TCon (T.TCN a) b)
-                       in return f <+/> capIdent <*/> simpleTypeDecl)
+                       in return f <+/> capIdent <*/> simpleTypeDecl <?> "data type")
   <|> try (do 
              pos <- getPosition
              withPos $ let f a = T.TVar a
-                in return f <+/> ident)
+                in return f <+/> ident <?> "variable")
 
 funcTypeDecl = do
   --pos <- getPosition
   withPos $ let f a _ c = T.TFun [a] c
-    in return f <+/> (try (indentParens lexer typeDecl) <|> simpleTypeDecl) <+/> reservedOp "->" <+/> typeDecl
+    in return f <+/> (try (indentParens lexer typeDecl) <|> simpleTypeDecl) <+/> reservedOp "->"
+          <+/> typeDecl <?> "function type"
 
 typeDecl = do
-  try funcTypeDecl
-  <|> simpleTypeDecl
+ (try funcTypeDecl
+  <|> simpleTypeDecl ) <?> "type declare"
 
 funcDecl = do
   funcBody
@@ -223,7 +224,7 @@ funcDecl = do
 funcType = do
   pos <- getPosition
   (n, t) <- withPos $ let f a _ c = (a, c)
-    in (return f) <+/> ident <+/> reservedOp "::" <+/> typeDecl
+    in (return f) <+/> ident <+/> reservedOp "::" <+/> typeDecl <?> "function type declare"
   --endLine
   m <- getState
   modifyModuleOrFail $ M.addEnv n (T.Scheme (Set.toList $ TI.ftv t) t) pos m
@@ -232,25 +233,25 @@ funcType = do
 funcBody = do
   pos <- getPosition
   (n, ps, e) <- withPos $ let f a b _ d = (a, b, d)
-    in (return f) <+/> ident <+/> (many pattern) <+/> reservedOp "=" <+/> expr
+    in (return f) <+/> ident <+/> (many pattern) <+/> reservedOp "=" <+/> expr <?> "function declare"
   --endLine
   m <- getState
   modifyModuleOrFail $ M.addSource n (A.EFun n ps e pos) m
   return ()
 
 pattern = do
-  try (indentParens lexer pattern)
+ (try (indentParens lexer pattern)
   <|> try (do
         pos <- getPosition
         withPos $ let f a b = A.ECon (A.CCon a b) pos
-          in return f <+/> capIdent <*/> pattern)
+          in return f <+/> capIdent <*/> pattern <?> "data constructor pattern")
   <|> try (do
         pos <- getPosition
         withPos $ let f a = A.EVar a pos
-          in return f <+/> ident)
+          in return f <+/> ident <?> "variable")
   <|> try (do
         pos <- getPosition
-        (\p -> A.ECon (A.CCon "()" p) pos) <$> (indentParens lexer (commaSep pattern)))
+        (\p -> A.ECon (A.CCon "()" p) pos) <$> (indentParens lexer (commaSep pattern)) <?> "tuple pattern")
   <|> try (do
         pos <- getPosition
         (\a -> A.ELit (A.LDouble a) pos) <$> float)
@@ -262,12 +263,13 @@ pattern = do
       (\a -> A.ELit (A.LStr a) pos) <$> stringLiteral)
   <|> (do
       pos <- getPosition
-      (\p -> A.ECon (A.CCon ":" p) pos) <$> (indentParens lexer (return (\a _ c -> [a, c]) <+/> pattern <+/> reservedOp ":" <+/> pattern)))
+      (\p -> A.ECon (A.CCon ":" p) pos) <$> (indentParens lexer (return (\a _ c -> [a, c]) <+/> pattern <+/>
+                 reservedOp ":" <+/> pattern <?> "list cons pattern")))
   <|> (do
       pos <- getPosition
-      (\p -> A.ECon (A.CCon "[]" p) pos) <$> (indentBrackets lexer (commaSep pattern)))
+      (\p -> A.ECon (A.CCon "[]" p) pos) <$> (indentBrackets lexer (commaSep pattern)) <?> "list pattern")) <?> "pattern"
 
-expr = buildExpressionParser table factor
+expr = (buildExpressionParser table factor) <?> "experssion"
 
 table = [
   [op ":" cons AssocRight, op "^" epn AssocLeft],
@@ -308,76 +310,76 @@ factor = do
     <|> letExpr
     <|> tupleExpr
     <|> listExpr
-    <|> simpleExpr)
+    <|> simpleExpr) <?> "experssion"
 
 lambdaExpr = do
   pos <- getPosition
   withPos $ let f _ b _ d = A.EAbs b d pos
-    in return f <+/> reservedOp "\\" <+/> (many pattern) <+/> reservedOp "->" <+/> expr
+    in return f <+/> reservedOp "\\" <+/> (many pattern) <+/> reservedOp "->" <+/> expr <?> "lambda experssion"
 
 ifExpr = do
   pos <- getPosition
   withPos $ let f _ b _ d _ g = A.EIf b d g pos
-    in return f <+/> reserved "if" <+/> expr <+/> reserved "then" <+/> expr <+/> reserved "else" <+/> expr
+    in return f <+/> reserved "if" <+/> expr <+/> reserved "then" <+/> expr <+/> reserved "else" <+/> expr <?> "if experssion"
 
 letExpr = do
   pos <- getPosition
   withPos $ let f _ b _ d = A.ELet b d pos
-    in return f <+/> reserved "let" <+/> letDecl <+/> reserved "in" <+/> expr
+    in return f <+/> reserved "let" <+/> letDecl <+/> reserved "in" <+/> expr <?> "let experssion"
 
 letDecl = do
   block $ withPos $ let g a _ c = (a, c)
-    in return g <+/> pattern <+/> reserved "=" <+/> expr
+    in return g <+/> pattern <+/> reserved "=" <+/> expr <?> "let pattern expresion"
 
 caseExpr = do
   pos <- getPosition
   b <- withPos $ let f _ b _ = b
-    in return f <+/> reserved "case" <+/> expr <+/> reserved "of"
+    in return f <+/> reserved "case" <+/> expr <+/> reserved "of" <?> "case experssion"
   indented
   c <- block (do
     withPos $ let g a _ c = (a, c)
-      in return g <+/> pattern <+/> reserved "->" <+/> expr
+      in return g <+/> pattern <+/> reserved "->" <+/> expr <?> "case pattern experssion"
     )
   return $ A.ECase b c pos
 
 param = do
-    try (indentParens lexer expr)
+   (try (indentParens lexer expr)
     <|> lambdaExpr
     <|> ifExpr
     <|> caseExpr
     <|> letExpr
     <|> tupleExpr
     <|> listExpr
-    <|> simpleExpr
+    <|> simpleExpr) <?> "parameters"
 
 funcCall = do
   pos <- getPosition
   try (withPos  $ let f a b c = A.EApp a (b:c) pos
-    in return f <+/> (indentParens lexer expr) <+/> param <*/> param)
+    in return f <+/> (indentParens lexer expr) <+/> param <*/> param <?> "function call")
   <|> (do
       pos <- getPosition
       withPos $ let f a b c = A.EApp (A.EVar a pos) (b:c) pos
-        in return f <+/> identifier <+/> param <*/> param)
+        in return f <+/> identifier <+/> param <*/> param <?> "function call")
 
 tupleExpr = do
   pos <- getPosition
-  (\a -> A.ECon (A.CCon "()" a) pos) <$> (indentParens lexer (commaSep expr))
+  (\a -> A.ECon (A.CCon "()" a) pos) <$> (indentParens lexer (commaSep expr)) <?> "tuple experssion"
 
 listExpr = do
   pos <- getPosition
-  (\a -> A.ECon (A.CCon "[]" a) pos) <$> (indentBrackets lexer (commaSep expr))
+  (\a -> A.ECon (A.CCon "[]" a) pos) <$> (indentBrackets lexer (commaSep expr)) <?> "list experssion"
 
 simpleExpr = do
-  (do
+ ((do
      pos <- getPosition
      reserved "not"
-     ((\e -> A.EApp (A.EVar "not" pos) [e] pos) <$> expr))
+     ((\e -> A.EApp (A.EVar "not" pos) [e] pos) <$> expr) <?> "logic not experssion")
   <|> (do
         pos <- getPosition
-        (try ((\a -> A.EVar a pos) <$> ident)))
+        (try ((\a -> A.EVar a pos) <$> ident <?> "variable")))
   <|> (do
   	    pos <- getPosition
-  	    (\a -> A.ECon (A.CCon a []) pos) <$> capIdent)
+  	    (\a -> A.ECon (A.CCon a []) pos) <$> capIdent <?> "data constructor experssion")
   <|> try (do
         pos <- getPosition
         (\a -> A.ELit (A.LDouble a) pos) <$> float)
@@ -386,7 +388,7 @@ simpleExpr = do
       (\a -> A.ELit (A.LInt a) pos) <$> natural)
   <|> (do
       pos <- getPosition
-      (\a -> A.ELit (A.LStr a) pos) <$> stringLiteral)
+      (\a -> A.ELit (A.LStr a) pos) <$> stringLiteral)) <?> "experssion"
 
 
 parser = do

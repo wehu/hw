@@ -30,7 +30,8 @@ module Module(
   addSource,
   addEnv_,
   addEnv,
-  addInitEnv
+  addInitEnv,
+  sysSourcePos
 ) where
 
 import qualified Data.Map as Map
@@ -221,15 +222,6 @@ prefixExpList pre (x:ps) = (prefixExp pre x):(prefixExpList pre ps)
 instance Show (Module) where
   showsPrec _ x = shows $ prModule x
 
-{-
-                      name::String,
-                      exports::Exports,
-                      imports::Imports,
-                      types::Types,
-                      source::Source,
-                      env::Env}
-                      deriving Show
--}
 
 prModule m =
   PP.text ("module " ++ (name m) ++ " where\n\n") PP.<>
