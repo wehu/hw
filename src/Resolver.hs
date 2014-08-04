@@ -184,7 +184,9 @@ importFile_ ps file fs pos poses = do
                                        ""
                                        (zip fs poses)
               else do
-                     m <- importModules ps (M.addInitEnv m) (fn:fs) (pos:poses)
+                     m <- if file == "Prelude"
+                          then return (M.addInitEnv m)
+                          else importModules ps (M.addInitEnv m) (fn:fs) (pos:poses)
                      m <- resolveModuleTypes m
                      resolveModuleSource m)) nullModules
       case r of

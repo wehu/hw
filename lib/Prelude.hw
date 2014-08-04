@@ -1,0 +1,7 @@
+module Prelude where
+
+liftS3 :: (a -> b -> c -> d) -> Signal a -> Signal b -> Signal c -> Signal d
+liftS3 f a b c = liftS2 (\f c -> f c) (liftS2 f a b) c
+
+liftS4 :: (a -> b -> c -> d -> e) -> Signal a -> Signal b -> Signal c -> Signal d -> Signal e
+liftS4 f a b c d = liftS2 (\f d -> f d) (liftS3 f a b c) d

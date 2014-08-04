@@ -64,7 +64,7 @@ nullSource  = Map.empty
 nullEnv     = Map.empty
 initModule  = Module {name = "",
                       exports = nullExports,
-                      imports = nullImports,
+                      imports = Map.singleton "Prelude" ("", sysSourcePos),
                       types   = nullTypes,
                       source  = nullSource,
                       env     = nullEnv}
@@ -138,19 +138,21 @@ global_list = ["[]", "()", "True", "False",
 
 prefix m n =
   let pre = name m
-  in if n =~ "\\."
-     then Map.foldlWithKey
-     	   (\acc o (a, _)->
-     	     let [[n, p, c]] = (acc =~ "(.*)\\.(.*)" :: [[String]])
-     	     in if a == p
-     	        then o ++ "." ++ c
-     	        else n
-     	   )
-     	   n
-     	   (imports m)
-     else if elem n global_list
-  	      then n
-  	      else pre ++ "." ++ n
+  in if pre == "Prelude"
+     then n
+     else if n =~ "\\."
+          then Map.foldlWithKey
+          	   (\acc o (a, _)->
+          	     let [[n, p, c]] = (acc =~ "(.*)\\.(.*)" :: [[String]])
+          	     in if a == p
+          	        then o ++ "." ++ c
+          	        else n
+          	   )
+          	   n
+          	   (imports m)
+          else if elem n global_list
+  	           then n
+  	           else pre ++ "." ++ n
 
 addInitEnv m =
   addType_ "[]" [(T.TCon (T.TCN "[]") [T.TVar "a"]), (T.TCon (T.TCN "[]") [T.TVar "a"])] sysSourcePos $
