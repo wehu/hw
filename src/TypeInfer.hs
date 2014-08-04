@@ -169,7 +169,7 @@ instantiate (T.Scheme vars t) = do
     in return $ subSt s t
 
 typeMismatch e t1 t2 = throwError $
-                         "Error : type `" ++ (show t1) ++ "\' mismatch with type `" ++ (show t2)
+                         "type `" ++ (show t1) ++ "\' mismatch with type `" ++ (show t2)
                          ++ "\'\n    @ " ++ (show $ sourceName $ A.exprPos e)
                          ++ ":(" ++ (show $ sourceLine $ A.exprPos e)
                          ++ "," ++ (show $ sourceColumn $ A.exprPos e)

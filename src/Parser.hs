@@ -109,7 +109,7 @@ modifyModuleOrFail res =
     Right m -> setState m
     Left s -> do
       pos <- getPosition
-      error $ "Error : " ++ (show $ sourceName pos) ++ ":("
+      error $ (show $ sourceName pos) ++ ":("
               ++ (show $ sourceLine pos) ++ "," ++ (show $ sourceColumn pos)
               ++ ")\n\n" ++ s
 

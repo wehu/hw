@@ -74,8 +74,27 @@ prExp (ELit (LStr s) _) = PP.text s
 prExp (ECon (CCon n []) _) = PP.text n
 prExp (ECon (CCon n es) _) = PP.parens $ PP.text n PP.<+> prExpList es
 prExp (EApp f [] _) = prExp f
-prExp (EApp f [a] _) = PP.parens $ prExp f PP.<+> prExp a
-prExp e@(EApp _ _ _) = prExp $ translateApp e
+prExp (EApp (EVar "*" _) [a, b] _)   = PP.parens $ (prExp a) PP.<+> PP.text " * "     PP.<+> (prExp b)
+prExp (EApp (EVar "/" _) [a, b] _)   = PP.parens $ (prExp a) PP.<+> PP.text " / "     PP.<+> (prExp b)
+prExp (EApp (EVar "div" _) [a, b] _) = PP.parens $ (prExp a) PP.<+> PP.text " `div` " PP.<+> (prExp b)
+prExp (EApp (EVar "mod" _) [a, b] _) = PP.parens $ (prExp a) PP.<+> PP.text " `mod` " PP.<+> (prExp b)
+prExp (EApp (EVar "rem" _) [a, b] _) = PP.parens $ (prExp a) PP.<+> PP.text " `rem` " PP.<+> (prExp b)
+prExp (EApp (EVar "+" _) [a, b] _)   = PP.parens $ (prExp a) PP.<+> PP.text " + "     PP.<+> (prExp b)
+prExp (EApp (EVar "-" _) [a, b] _)   = PP.parens $ (prExp a) PP.<+> PP.text " - "     PP.<+> (prExp b)
+prExp (EApp (EVar "||" _) [a, b] _)  = PP.parens $ (prExp a) PP.<+> PP.text " || "    PP.<+> (prExp b)
+prExp (EApp (EVar "&&" _) [a, b] _)  = PP.parens $ (prExp a) PP.<+> PP.text " && "    PP.<+> (prExp b)
+prExp (EApp (EVar ":" _) [a, b] _)   = PP.parens $ (prExp a) PP.<+> PP.text " : "     PP.<+> (prExp b)
+prExp (EApp (EVar "^" _) [a, b] _)   = PP.parens $ (prExp a) PP.<+> PP.text " ^ "     PP.<+> (prExp b)
+prExp (EApp (EVar "==" _) [a, b] _)  = PP.parens $ (prExp a) PP.<+> PP.text " == "    PP.<+> (prExp b)
+prExp (EApp (EVar "/=" _) [a, b] _)  = PP.parens $ (prExp a) PP.<+> PP.text " /= "    PP.<+> (prExp b)
+prExp (EApp (EVar ">=" _) [a, b] _)  = PP.parens $ (prExp a) PP.<+> PP.text " >= "    PP.<+> (prExp b)
+prExp (EApp (EVar "<=" _) [a, b] _)  = PP.parens $ (prExp a) PP.<+> PP.text " <= "    PP.<+> (prExp b)
+prExp (EApp (EVar ">" _) [a, b] _)   = PP.parens $ (prExp a) PP.<+> PP.text " > "     PP.<+> (prExp b)
+prExp (EApp (EVar "<" _) [a, b] _)   = PP.parens $ (prExp a) PP.<+> PP.text " < "     PP.<+> (prExp b)
+prExp (EApp (EVar "|>" _) [a, b] _)  = PP.parens $ (prExp a) PP.<+> PP.text " |> "    PP.<+> (prExp b)
+prExp (EApp (EVar "<|" _) [a, b] _)  = PP.parens $ (prExp a) PP.<+> PP.text " <| "    PP.<+> (prExp b)
+prExp (EApp f ps _) = PP.parens $ prExp f PP.<+> prExpList ps
+--prExp e@(EApp _ _ _) = prExp $ translateApp e
 prExp (EAbs [] e _) = prExp e
 prExp (EAbs ps e _) = PP.parens $ PP.text "\\" PP.<+> prExpList ps
                       PP.<+> PP.text "->" PP.<+> prExp e
