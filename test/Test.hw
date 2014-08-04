@@ -3,6 +3,7 @@ module Test where
 
 
 import Test2 as XX
+import Test3
 
 data B = BBB
 data A a = BB a| CCC a| NN (a -> Int)
@@ -12,6 +13,7 @@ aaa aa bb = let a = CCC bb
                 b = BB a
              in b
 bbb = (div (1 * 2) 4) + 3 - 0
+fff = BBB
 fff = BBB
 eee = 3:[1, 2]
 yyy = (2, 1)
@@ -25,7 +27,7 @@ ttt = let f = \a->a
        in (f 1) + (f 2)
 --ooo :: Int -> C
 ooo = BBB
---ppp = XX.BBB
+pppp = XX.BBB
 
 f a = a
 

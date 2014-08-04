@@ -1,5 +1,8 @@
 module Test3 where
 
+import Test2
+
+
 f = 1 |> (\a -> (3 + a))
 
 g =  2
