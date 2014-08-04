@@ -6,7 +6,7 @@ g =  2
 
 data A a = A a
 
-main = let i = liftS2 (\s1 s2 -> s1 + s2 + 1.0 + f)
+main = let i = liftS2 (\s1 s2 -> s1 + s2 + 1 + f)
                <| (foldS (\acc a -> acc + 1) 1 clk)
                <| (liftS (\a -> 1) clk)
          in i

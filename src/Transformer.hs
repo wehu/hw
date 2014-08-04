@@ -168,7 +168,7 @@ transform2hs clk m = do
            ++ "   in put $ Map.insert \"clk\" (setSignalValue (clk + 1)) m\n"
            ++ "  if i < " ++ clk ++"\n"
            ++ "  then do\n"
-           ++ "         liftIO $ putStrLn $ show v\n"
+           ++ "         liftIO $ putStrLn $ \"[HW \" ++ (show i) ++ \"]: \" ++ (show v)\n"
            ++ "         main__ (i + 1)\n"
            ++ "  else return v\n"
            ++ "\n\n"
@@ -230,7 +230,7 @@ builtIn = unlines [
   "main = do",
   "  res <- (runStateT $ runErrorT (main__ 0)) Map.empty",
   "  case res of",
-  "    (Right d, _) -> putStrLn $ show d",
+  "    (Right d, _) -> return ()",
   "    (Left err, _) -> putStrLn err",
   "class SignalClass a where",
   "  getSignalValue :: SignalValue -> a",

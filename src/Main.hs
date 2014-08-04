@@ -41,7 +41,7 @@ parseArgs argv = case getOpt Permute options argv of
         (opts, files, [])
                 | (Help `elem` opts) || (files == []) -> ([], "0", [])
                 | otherwise -> (map (\(I p) -> p) (filter (/=Help) opts),
-                                (foldl' (\a o -> case o of (C c) -> c; _ -> a) "100" opts),
+                                (foldl' (\a o -> case o of (C c) -> c; _ -> a) "0" opts),
                                 files)
         (_, _, errs) -> (errs, "0", [])
 
