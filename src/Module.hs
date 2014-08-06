@@ -158,24 +158,10 @@ addInitEnv m =
   addType_ "[]" [(T.TCon (T.TCN "[]") [T.TVar "a"]), (T.TCon (T.TCN "[]") [T.TVar "a"])] sysSourcePos $
   addType_ "Signal" [(T.TCon (T.TCN "Signal") [T.TVar "a"]), (T.TCon (T.TCN "Signal") [T.TVar "a"])] sysSourcePos $
   addType_ "Clk" [(T.TCon (T.TCN "Clk") []), (T.TCon (T.TCN "Clk") [])] sysSourcePos $
-  addEnv_ "liftS" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a"] (T.TVar "b"),
-     (T.TCon (T.TCN "Signal") [T.TVar "a"])] (T.TCon (T.TCN "Signal") [T.TVar "b"]))) sysSourcePos $
-  addEnv_ "liftS2" (T.Scheme ["a", "b", "c"] (T.translateFunType $ T.TFun [
-     T.translateFunType $T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "c"),
-     (T.TCon (T.TCN "Signal") [T.TVar "a"]), (T.TCon (T.TCN "Signal") [T.TVar "b"])]
-     (T.TCon (T.TCN "Signal") [T.TVar "c"]))) sysSourcePos $
-  addEnv_ "foldS" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [
-     T.translateFunType $ T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "a"),
-     (T.TVar "a"),
-     (T.TCon (T.TCN "Signal") [T.TVar "b"])] (T.TCon (T.TCN "Signal") [T.TVar "a"]))) sysSourcePos $
-  addEnv_ "clk" (T.Scheme [] (T.TCon (T.TCN "Signal") [T.TCon (T.TCN "Clk") []])) sysSourcePos $
   addEnv_ "True" (T.Scheme [] $ T.TBool) sysSourcePos $
   addEnv_ "False" (T.Scheme [] $ T.TBool) sysSourcePos $
   addEnv_ "*" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
   addEnv_ "/" (T.Scheme [] (T.translateFunType $ T.TFun [T.TDouble, T.TDouble] (T.TDouble))) sysSourcePos $
-  addEnv_ "div" (T.Scheme [] (T.translateFunType $ T.TFun [T.TInt, T.TInt] (T.TInt))) sysSourcePos $
-  addEnv_ "mod" (T.Scheme [] (T.translateFunType $ T.TFun [T.TInt, T.TInt] (T.TInt))) sysSourcePos $
-  addEnv_ "rem" (T.Scheme [] (T.translateFunType $ T.TFun [T.TInt, T.TInt] (T.TInt))) sysSourcePos $
   addEnv_ "+" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
   addEnv_ "-" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TVar "a"))) sysSourcePos $
   addEnv_ "==" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "a"] (T.TBool))) sysSourcePos $
@@ -188,12 +174,9 @@ addInitEnv m =
   addEnv_ "&&" (T.Scheme [] (T.translateFunType $ T.TFun [T.TBool, T.TBool] (T.TBool))) sysSourcePos $
   addEnv_ "|>" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TVar "a", T.TFun [T.TVar "a"] (T.TVar "b")] (T.TVar "b"))) sysSourcePos $
   addEnv_ "<|" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TFun [T.TVar "a"] (T.TVar "b"), T.TVar "b"] (T.TVar "b"))) sysSourcePos $
-  addEnv_ "not" (T.Scheme [] (T.translateFunType $ T.TFun [T.TBool] (T.TBool))) sysSourcePos $
   addEnv_ "^" (T.Scheme ["a", "b"] (T.translateFunType $ T.TFun [T.TVar "a", T.TVar "b"] (T.TVar "a"))) sysSourcePos $
   addEnv_ ":" (T.Scheme ["a"] (T.translateFunType $ T.TFun [T.TVar "a", T.TCon (T.TCN "[]") [T.TVar "a"]] (T.TCon (T.TCN "[]") [T.TVar "a"]))) sysSourcePos $
-  addEnv_ "main" (T.Scheme ["a"] $ T.TFun [] (T.TCon (T.TCN "Signal") [T.TVar "a"])) sysSourcePos $
-  addEnv_ "clk2Int" (T.Scheme [] $ T.TFun [T.TCon (T.TCN "Clk") []] T.TInt) sysSourcePos $
-  addEnv_ "int2Clk" (T.Scheme [] $ T.TFun [T.TInt] (T.TCon (T.TCN "Clk") [])) sysSourcePos m
+  addEnv_ "main" (T.Scheme ["a"] $ T.TFun [] (T.TCon (T.TCN "Signal") [T.TVar "a"])) sysSourcePos m
 
 
 --prefixType :: String -> T.Type -> T.Type

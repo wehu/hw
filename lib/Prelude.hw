@@ -1,5 +1,31 @@
 module Prelude where
 
+id :: a -> a
+id a = a
+
+clk :: Signal Clk 
+
+div :: Int -> Int -> Int
+
+mod :: Int -> Int -> Int
+
+rem :: Int -> Int -> Int
+
+not :: Bool -> Bool
+
+clk2Int :: Clk -> Int
+
+int2Clk :: Int -> Clk
+
+currentClk :: Signal Int
+currentClk = liftS (\c -> (clk2Int c)) clk
+
+foldS :: (a -> b -> a) -> a -> Signal b -> Signal a
+
+liftS :: (a -> b) -> Signal a -> Signal b
+
+liftS2 :: (a -> b -> c) -> Signal a -> Signal b -> Signal c
+
 liftS3 :: (a -> b -> c -> d) -> Signal a -> Signal b -> Signal c -> Signal d
 liftS3 f a b c = liftS2 (\f c -> f c) (liftS2 f a b) c
 

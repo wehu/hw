@@ -34,7 +34,7 @@ f a = a
 main :: Signal Int
 main = liftS3 (\(NN s1) s2 s3 -> (s1 0) + 0 + s3) <| pp <| oo <| oo
 
-oo = foldS (\a i -> a) 0 clk
+oo = foldS (\a i -> a + i) 0 currentClk
 
 pp = foldS (\a i -> a) (NN (\f -> 1 )) clk
 
