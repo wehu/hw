@@ -46,7 +46,7 @@ languageDef = P.LanguageDef
   ,P.commentEnd      = P.commentEnd haskellDef
   ,P.commentLine     = P.commentLine haskellDef
   ,P.nestedComments  = P.nestedComments haskellDef
-  ,P.identStart      = letter
+  ,P.identStart      = letter <|> char '_'
   ,P.identLetter     = alphaNum <|> char '_' <|> char '#' <|> char '.'
   ,P.opStart         = P.opLetter languageDef
   ,P.opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"

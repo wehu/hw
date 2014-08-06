@@ -20,6 +20,9 @@ int2Clk :: Int -> Clk
 currentClk :: Signal Int
 currentClk = liftS (\c -> (clk2Int c)) clk
 
+constant :: a -> Signal a
+constant a = liftS (\_ -> a) clk
+
 foldS :: (a -> b -> a) -> a -> Signal b -> Signal a
 
 liftS :: (a -> b) -> Signal a -> Signal b
